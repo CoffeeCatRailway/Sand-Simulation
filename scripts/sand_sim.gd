@@ -69,7 +69,7 @@ func passToShader() -> void:
 		for y in range(0, height):
 			var i = y * height + x
 			if data[i] == 1:
-				image.set_pixel(x, y, Color.WHITE)
+				image.set_pixel(x, y, Color.SANDY_BROWN)
 			elif data[i] == 2:
 				image.set_pixel(x, y, Color.RED)
 			elif data[i] == 3:
