@@ -1,5 +1,6 @@
 extends Node2D
 
+@onready var colorRect: ColorRect = $CanvasLayer/Control/ColorRect
 @export var cellSize: int = 10
 
 var width: int
@@ -9,35 +10,39 @@ var data: Array[int] = []
 var markUpdate := false
 
 func _ready() -> void:
-	var control := Vector2i($Control.size)
+	var control := Vector2i($CanvasLayer/Control.size)
 	width = control.x / cellSize
 	height = control.y / cellSize
 	print("Sim Resolution: %s/%s" % [width, height])
+	colorRect.material.set_shader_parameter("size", Vector2(width, height))
 	
 	data.resize(width * height)
 	data.fill(0)
-	data[(height / 2) * height + (width / 2)] = 1
-	data[0 * height + 0] = 2
-	data[0 * height + (width - 1)] = 3
-	data[(height - 2) * height + 0] = 4
+	data[(height / 2) * height + (width / 2)] = 1 	# sand
+	data[0 * height + 0] = 2						# red
+	data[0 * height + (width - 1)] = 3				# green
+	data[(height - 2) * height + 0] = 4				# blue
 	
 	passToShader()
 
 func _process(delta) -> void:
 	if Input.is_action_pressed("mouse_left"):
+		var mpos := Vector2i(get_local_mouse_position()) / cellSize
 		for x in range(-1, 2):
 			for y in range(-1, 2):
-				var mpos := Vector2i(get_global_mouse_position())
-				var i = (mpos.y / cellSize + y) * height + (mpos.x / cellSize + x)
+				var i = (mpos.y + y) * height + (mpos.x + x)
 				if data[i] == 0:
 					data[i] = 1
+					markUpdate = true
 	if Input.is_action_pressed("mouse_right"):
+		var mpos := Vector2i(get_local_mouse_position()) / cellSize
+		print(mpos)
 		for x in range(-1, 2):
 			for y in range(-1, 2):
-				var mpos := Vector2i(get_global_mouse_position())
-				var i = (mpos.y / cellSize + y) * height + (mpos.x / cellSize + x)
+				var i = (mpos.y + y) * height + (mpos.x + x)
 				if data[i] != 0:
 					data[i] = 0
+					markUpdate = true
 
 func _physics_process(delta) -> void:
 	simulate()
@@ -80,4 +85,4 @@ func passToShader() -> void:
 				image.set_pixel(x, y, Color.BLACK)
 	
 	var texture = ImageTexture.create_from_image(image)
-	($Control/ColorRect.material as ShaderMaterial).set_shader_parameter("tex", texture)
+	colorRect.material.set_shader_parameter("tex", texture)
