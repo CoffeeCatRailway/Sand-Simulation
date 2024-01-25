@@ -8,7 +8,7 @@ extends Node2D
 var width: int
 var height: int
 
-var data: Array[int] = []
+var data: Dictionary = {} # Vector2i/Cell
 var markUpdate := false
 
 func _ready() -> void:
@@ -18,99 +18,131 @@ func _ready() -> void:
 	print("Sim Resolution: %s/%s" % [width, height])
 	colorRect.material.set_shader_parameter("size", Vector2(width, height))
 	
-	data.resize(width * height)
-	data.fill(0)
+	#data.resize(width * height)
+	#data.fill(0)
 	#data[(height / 2) * height + (width / 2)] = 1 	# sand
 	#data[0 * height + 0] = 2						# gas
 	#data[0 * height + (width - 1)] = 3				# green
 	#data[(height - 2) * height + 0] = 4				# blue
 	
+	var pos := Vector2i.ZERO
 	for x in range(0, width):
 		for y in range(0, height):
-			var i = y * height + x
+			pos.x = x
+			pos.y = y
 			if x == 0 || y == 0 || x == width - 1 || y == height - 1:
-				data[i] = 4
+				setCellv(pos, 4)
 	
 	passToShader()
 
 func _process(delta) -> void:
 	var tempPos := Vector2i.ZERO
-	if Input.is_action_pressed("mouse_left"):
-		var element := 1
-		if Input.is_action_pressed("ui_home"):
-			element = 2
-		
+	var mouseLeft := Input.is_action_pressed("mouse_left")
+	var mouseRight := Input.is_action_pressed("mouse_right")
+	
+	if mouseLeft || mouseRight:
 		var mPos := Vector2i(get_local_mouse_position()) / cellSize
 		for x in range(-brushRadius, brushRadius + 1):
 			for y in range(-brushRadius, brushRadius + 1):
 				tempPos.x = mPos.x + x
 				tempPos.y = mPos.y + y
 				if vec2iDist(mPos, tempPos) <= brushRadius || squareBrush:
-					var i = tempPos.y * height + tempPos.x
-					if data[i] == 0:
-						data[i] = element
+					if mouseLeft:
+						var element := 1
+						if Input.is_action_pressed("ui_home"):
+							element = 2
+						if getCellv(tempPos) == 0:
+							setCellv(tempPos, element)
+							markUpdate = true
+					if mouseRight:
+						eraseCell(tempPos)
 						markUpdate = true
-	if Input.is_action_pressed("mouse_right"):
-		var mPos := Vector2i(get_local_mouse_position()) / cellSize
-		for x in range(-brushRadius, brushRadius + 1):
-			for y in range(-brushRadius, brushRadius + 1):
-				tempPos.x = mPos.x + x
-				tempPos.y = mPos.y + y
-				if vec2iDist(mPos, tempPos) <= brushRadius || squareBrush:
-					var i = tempPos.y * height + tempPos.x
-					if data[i] != 0:
-						data[i] = 0
-						markUpdate = true
+
+func getCell(x: int, y: int) -> int:
+	return getCellv(Vector2i(x, y))
+
+func getCellv(pos: Vector2i) -> int:
+	var p := Vector2i.ZERO
+	p.x = clamp(pos.x, 0, width - 1)
+	p.y = clamp(pos.y, 0, height - 1)
+	return data.get(p, 0)
+
+func setCell(x: int, y: int, cell: int) -> int:
+	return setCellv(Vector2i(x, y), cell)
+
+func setCellv(pos: Vector2i, cell: int) -> int:
+	var p := Vector2i.ZERO
+	p.x = clamp(pos.x, 0, width - 1)
+	p.y = clamp(pos.y, 0, height - 1)
+	
+	var old = data.get(p, 0)
+	data[p] = cell
+	return old
+
+func eraseCell(pos: Vector2i) -> bool:
+	return data.erase(pos)
 
 func vec2iDist(a: Vector2i, b: Vector2i) -> float:
 	return sqrt(pow(a.x - b.x, 2.) + pow(a.y - b.y, 2.))
 
 func _physics_process(delta) -> void:
+	if markUpdate:
+		sortCells()
+	
 	simulate()
+	
 	if markUpdate:
 		passToShader()
 
+func sortCells() -> void:
+	var newCells: Dictionary = {}
+	var keys = data.keys()
+	keys.sort_custom(func(a, b): return a.y < b.y)
+	for pos in keys:
+		newCells[pos] = data[pos]
+	data = Dictionary(newCells)
+
 func simulate() -> void:
-	for x in range(0, width):
-		for y in range(0, height):
-			var i = y * height + x
-			
-			if data[i] == 1: # Sand
-				if y != 0:
-					var dx: int = clamp(x + (1 if randf() > .5 else -1), 0, width - 1)
-					var dy: int = clamp(y - 1, 0, height - 1)
-					
-					if data[dy * height + x] == 0:
-						data[i] = 0
-						data[dy * height + x] = 1
-						markUpdate = true
-					elif data[dy * height + dx] == 0:
-						data[i] = 0
-						data[dy * height + dx] = 1
-						markUpdate = true
-			elif data[i] == 2: # gas
-				var dx: int = clamp(x + (1 if randf() > .5 else -1), 0, width - 1)
-				var dy: int = clamp(y + (1 if randf() > .5 else -1), 0, height - 1)
-				if data[dy * height + dx] == 0:
-					data[i] = 0
-					data[dy * height + dx] = 2
+	for pos in data:
+		var cell = data[pos]
+		if cell != 0 && cell != 1:
+			continue
+		
+		if cell == 1: # sand
+			if pos.y != 0:
+				var dx: int = clamp(pos.x + (1 if randf() > .5 else -1), 0, width - 1)
+				var dy: int = clamp(pos.y - 1, 0, height - 1)
+				
+				if getCell(pos.x, dy) == 0:
+					eraseCell(pos)
+					setCell(pos.x, dy, 1)
 					markUpdate = true
+				elif getCell(dx, dy) == 0:
+					eraseCell(pos)
+					setCell(dx, dy, 1)
+					markUpdate = true
+		elif cell == 2: # gas
+			var dx: int = clamp(pos.x + (1 if randf() > .5 else -1), 0, width - 1)
+			var dy: int = clamp(pos.y + (1 if randf() > .5 else -1), 0, height - 1)
+			
+			if getCell(dx, dy) == 0:
+				eraseCell(pos)
+				setCell(dx, dy, 2)
+				markUpdate = true
 
 func passToShader() -> void:
 	var image := Image.create(width, height, false, Image.FORMAT_RGB8)
-	for x in range(0, width):
-		for y in range(0, height):
-			var i = y * height + x
-			if data[i] == 1:
-				image.set_pixel(x, y, Color.SANDY_BROWN)
-			elif data[i] == 2:
-				image.set_pixel(x, y, Color.LIGHT_GRAY)
-			elif data[i] == 3:
-				image.set_pixel(x, y, Color.GREEN)
-			elif data[i] == 4:
-				image.set_pixel(x, y, Color.BLUE)
-			else:
-				image.set_pixel(x, y, Color.BLACK)
+	image.fill(Color.BLACK)
+	for pos in data:
+		var cell = data[pos]
+		if cell == 1:
+			image.set_pixelv(pos, Color.SANDY_BROWN)
+		elif cell == 2:
+			image.set_pixelv(pos, Color.LIGHT_GRAY)
+		elif cell == 3:
+			image.set_pixelv(pos, Color.GREEN)
+		elif cell == 4:
+			image.set_pixelv(pos, Color.BLUE)
 	
 	var texture = ImageTexture.create_from_image(image)
 	colorRect.material.set_shader_parameter("tex", texture)
