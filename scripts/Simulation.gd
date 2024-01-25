@@ -30,10 +30,6 @@ func _ready() -> void:
 			var i = y * height + x
 			if x == 0 || y == 0 || x == width - 1 || y == height - 1:
 				data[i] = 4
-			#elif x % 2 == 0 && y % 2 == 0:
-				#data[i] = 2
-			#else:
-				#data[i] = 3
 	
 	passToShader()
 
@@ -92,7 +88,7 @@ func simulate() -> void:
 						data[i] = 0
 						data[dy * height + dx] = 1
 						markUpdate = true
-			elif data[i] == 2:
+			elif data[i] == 2: # gas
 				var dx: int = clamp(x + (1 if randf() > .5 else -1), 0, width - 1)
 				var dy: int = clamp(y + (1 if randf() > .5 else -1), 0, height - 1)
 				if data[dy * height + dx] == 0:
