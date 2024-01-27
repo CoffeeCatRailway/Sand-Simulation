@@ -1,3 +1,4 @@
+class_name Simulation
 extends Node2D
 
 @onready var colorRect: ColorRect = $CanvasLayer/Control/ColorRect
@@ -9,8 +10,10 @@ var width: int
 var height: int
 
 var cells: Array[Array] = []
+var cellsOld: Array[Array] = []
 var xIndicies: Array[int] = []
-var markUpdate := false
+
+var markPassShader := false
 
 func _ready() -> void:
 	print("Brush radius: ", brushRadius)
@@ -27,24 +30,16 @@ func _ready() -> void:
 	# Fill array(s)
 	for x in width:
 		cells.append([])
+		cellsOld.append([])
 		xIndicies.append(x)
 		for y in height:
 			var emptyCell: Cell = Cell.new()
 			emptyCell.type = Cell.Type.EMPTY
 			cells[x].append(emptyCell)
+			cellsOld[x].append(emptyCell)
 			#if x == 0 || y == 0 || x == width - 1 || y == height - 1:
 				#setCell(x, y, 4)
 	xIndicies.shuffle()
-	
-	#data[width / 2][height / 2] = 1 	# sand
-	#data[0][0] = 2						# gas
-	#data[width - 1][0] = 3				# water
-	#data[0][height - 1] = 4				# red
-	
-	#for x in width:
-		#for y in height:
-			#if x == 0 || y == 0 || x == width - 1 || y == height - 1:
-				#setCell(x, y, 4)
 	
 	# Initialze screen
 	passToShader()
@@ -56,7 +51,6 @@ func _process(delta) -> void:
 	if mouseLeft || mouseRight:
 		var tempPos := Vector2i.ZERO
 		var mPos := Vector2i(get_local_mouse_position()) / cellSize
-		#print("Mouse pos: ", mPos)
 		for x in range(-brushRadius, brushRadius + 1):
 			for y in range(-brushRadius, brushRadius + 1):
 				tempPos.x = mPos.x + x
@@ -67,11 +61,28 @@ func _process(delta) -> void:
 						if Input.is_action_pressed("ui_home"):
 							element = Cell.Type.GAS
 						if getCellv(tempPos).type == Cell.Type.EMPTY:
-							setCell(tempPos.x, tempPos.y, element)
-							markUpdate = true
+							setCellv(tempPos, element)
+							markCellVisitedv(tempPos)
 					if mouseRight:
-						setCell(tempPos.x, tempPos.y, Cell.Type.EMPTY)
-						markUpdate = true
+						setCellv(tempPos, Cell.Type.EMPTY)
+						markCellVisitedv(tempPos)
+		markPassShader = true
+
+func getOldCell(x: int, y: int) -> Cell:
+	return getOldCellv(Vector2i(x, y))
+
+func getOldCellv(pos: Vector2i) -> Cell:
+	var x := clampi(pos.x, 0, width - 1)
+	var y := clampi(pos.y, 0, height - 1)
+	return cellsOld[x][y]
+
+func markOldCellVisited(x: int, y: int, visited: bool = true):
+	return markOldCellVisitedv(Vector2i(x, y))
+
+func markOldCellVisitedv(pos: Vector2i, visited: bool = true):
+	var x := clampi(pos.x, 0, width - 1)
+	var y := clampi(pos.y, 0, height - 1)
+	cellsOld[x][y].visited = visited
 
 func getCell(x: int, y: int) -> Cell:
 	return getCellv(Vector2i(x, y))
@@ -81,15 +92,21 @@ func getCellv(pos: Vector2i) -> Cell:
 	var y := clampi(pos.y, 0, height - 1)
 	return cells[x][y]
 
-func setCell(x: int, y: int, cellType: Cell.Type, visited: bool = false) -> void:
-	setCellv(Vector2i(x, y), cellType)
+func markCellVisited(x: int, y: int, visited: bool = true):
+	return markCellVisitedv(Vector2i(x, y), visited)
 
-func setCellv(pos: Vector2i, cellType: Cell.Type, visited: bool = false) -> void:
+func markCellVisitedv(pos: Vector2i, visited: bool = true):
 	var x := clampi(pos.x, 0, width - 1)
 	var y := clampi(pos.y, 0, height - 1)
-	
-	cells[x][y].type = cellType
 	cells[x][y].visited = visited
+
+func setCell(x: int, y: int, cellType: Cell.Type) -> void:
+	setCellv(Vector2i(x, y), cellType)
+
+func setCellv(pos: Vector2i, cellType: Cell.Type) -> void:
+	var x := clampi(pos.x, 0, width - 1)
+	var y := clampi(pos.y, 0, height - 1)
+	cells[x][y].type = cellType
 
 func vec2iDist(a: Vector2i, b: Vector2i) -> float:
 	return sqrt(pow(a.x - b.x, 2.) + pow(a.y - b.y, 2.))
@@ -97,48 +114,60 @@ func vec2iDist(a: Vector2i, b: Vector2i) -> float:
 func _physics_process(delta) -> void:
 	simulate()
 	
-	if markUpdate:
+	if markPassShader:
 		passToShader()
 		xIndicies.shuffle()
-		markUpdate = false
+		markPassShader = false
 
 func simulate() -> void:
+	# Copy old cell states
+	for x in width:
+		for y in height:
+			cellsOld[x][y].type = cells[x][y].type
+			cellsOld[x][y].visited = cells[x][y].visited
+	
 	for y in height:
 		y = height - 1 - y # Need for gravity to not be instant
 		for x in xIndicies:
-			var cell: Cell = getCell(x, y)
+			var cell: Cell = getOldCell(x, y)
 			match cell.type:
-				Cell.Type.SAND:
+				Cell.Type.SAND when !cell.visited:
 					updateSand(x, y)
-				Cell.Type.GAS:
+				Cell.Type.GAS when !cell.visited:
 					updateGas(x, y)
-				Cell.Type.WATER:
+				Cell.Type.WATER when !cell.visited:
 					updateWater(x, y)
 				_:
 					pass
+	
+	for x in width:
+		for y in height:
+			markCellVisited(x, y, false)
 
 func updateSand(x: int, y: int) -> void:
 	if y != height - 1:
-		var dx: int = clamp(x + (1 if randf() > .5 else -1), 0, width - 1)
-		var dy: int = clamp(y + 1, 0, height - 1)
+		var dx: int = x + (1 if randf() > .5 else -1)
 		
-		if getCell(x, dy).type == Cell.Type.EMPTY:
+		if getCell(x, y + 1).type == Cell.Type.EMPTY:
 			setCell(x, y, Cell.Type.EMPTY)
-			setCell(x, dy, Cell.Type.SAND)
-			markUpdate = true
-		elif getCell(dx, dy).type == Cell.Type.EMPTY:
+			markOldCellVisited(x, y)
+			setCell(x, y + 1, Cell.Type.SAND)
+			markPassShader = true
+		elif getCell(dx, y + 1).type == Cell.Type.EMPTY:
 			setCell(x, y, Cell.Type.EMPTY)
-			setCell(dx, dy, Cell.Type.SAND)
-			markUpdate = true
+			markOldCellVisited(x, y)
+			setCell(dx, y + 1, Cell.Type.SAND)
+			markPassShader = true
 
 func updateGas(x: int, y: int) -> void:
-	var dx: int = clamp(x + (1 if randf() > .5 else -1), 0, width - 1)
-	var dy: int = clamp(y + (1 if randf() > .5 else -1), 0, height - 1)
+	var dx: int = x + (1 if randf() > .5 else -1)
+	var dy: int = y + (1 if randf() > .5 else -1)
 	
 	if getCell(dx, dy).type == Cell.Type.EMPTY:
 		setCell(x, y, Cell.Type.EMPTY)
+		markOldCellVisited(x, y)
 		setCell(dx, dy, Cell.Type.GAS)
-		markUpdate = true
+		markPassShader = true
 
 func updateWater(x: int, y: int) -> void:
 	pass
