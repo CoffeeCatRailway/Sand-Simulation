@@ -8,7 +8,7 @@ extends Node2D
 var width: int
 var height: int
 
-var data: Array[Array] = []
+var cells: Array[Array] = []
 var xIndicies: Array[int] = []
 var markUpdate := false
 
@@ -26,17 +26,19 @@ func _ready() -> void:
 	
 	# Fill array(s)
 	for x in width:
-		data.append([])
+		cells.append([])
 		xIndicies.append(x)
 		for y in height:
-			data[x].append(0)
+			var emptyCell: Cell = Cell.new()
+			emptyCell.type = Cell.Type.EMPTY
+			cells[x].append(emptyCell)
 			#if x == 0 || y == 0 || x == width - 1 || y == height - 1:
 				#setCell(x, y, 4)
 	xIndicies.shuffle()
 	
 	#data[width / 2][height / 2] = 1 	# sand
 	#data[0][0] = 2						# gas
-	#data[width - 1][0] = 3				# green
+	#data[width - 1][0] = 3				# water
 	#data[0][height - 1] = 4				# red
 	
 	#for x in width:
@@ -61,34 +63,33 @@ func _process(delta) -> void:
 				tempPos.y = mPos.y + y
 				if vec2iDist(mPos, tempPos) <= brushRadius || squareBrush:
 					if mouseLeft:
-						var element := 1
+						var element := Cell.Type.SAND
 						if Input.is_action_pressed("ui_home"):
-							element = 2
-						if getCellv(tempPos) == 0:
+							element = Cell.Type.GAS
+						if getCellv(tempPos).type == Cell.Type.EMPTY:
 							setCell(tempPos.x, tempPos.y, element)
 							markUpdate = true
 					if mouseRight:
-						setCell(tempPos.x, tempPos.y, 0)
+						setCell(tempPos.x, tempPos.y, Cell.Type.EMPTY)
 						markUpdate = true
 
-func getCell(x: int, y: int) -> int:
+func getCell(x: int, y: int) -> Cell:
 	return getCellv(Vector2i(x, y))
 
-func getCellv(pos: Vector2i) -> int:
+func getCellv(pos: Vector2i) -> Cell:
 	var x := clampi(pos.x, 0, width - 1)
 	var y := clampi(pos.y, 0, height - 1)
-	return data[x][y]
+	return cells[x][y]
 
-func setCell(x: int, y: int, cell: int) -> int:
-	return setCellv(Vector2i(x, y), cell)
+func setCell(x: int, y: int, cellType: Cell.Type, visited: bool = false) -> void:
+	setCellv(Vector2i(x, y), cellType)
 
-func setCellv(pos: Vector2i, cell: int) -> int:
+func setCellv(pos: Vector2i, cellType: Cell.Type, visited: bool = false) -> void:
 	var x := clampi(pos.x, 0, width - 1)
 	var y := clampi(pos.y, 0, height - 1)
 	
-	var old := getCell(x, y)
-	data[x][y] = cell
-	return old
+	cells[x][y].type = cellType
+	cells[x][y].visited = visited
 
 func vec2iDist(a: Vector2i, b: Vector2i) -> float:
 	return sqrt(pow(a.x - b.x, 2.) + pow(a.y - b.y, 2.))
@@ -105,52 +106,58 @@ func simulate() -> void:
 	for y in height:
 		y = height - 1 - y # Need for gravity to not be instant
 		for x in xIndicies:
-			var cell := getCell(x, y)
-			if cell == 0 && cell == 4:
-				continue
-			
-			if cell == 1: # sand
-				updateSand(x, y)
-			elif cell == 2: # gas
-				updateGas(x, y)
+			var cell: Cell = getCell(x, y)
+			match cell.type:
+				Cell.Type.SAND:
+					updateSand(x, y)
+				Cell.Type.GAS:
+					updateGas(x, y)
+				Cell.Type.WATER:
+					updateWater(x, y)
+				_:
+					pass
 
 func updateSand(x: int, y: int) -> void:
 	if y != height - 1:
 		var dx: int = clamp(x + (1 if randf() > .5 else -1), 0, width - 1)
 		var dy: int = clamp(y + 1, 0, height - 1)
 		
-		if getCell(x, dy) == 0:
-			setCell(x, y, 0)
-			setCell(x, dy, 1)
+		if getCell(x, dy).type == Cell.Type.EMPTY:
+			setCell(x, y, Cell.Type.EMPTY)
+			setCell(x, dy, Cell.Type.SAND)
 			markUpdate = true
-		elif getCell(dx, dy) == 0:
-			setCell(x, y, 0)
-			setCell(dx, dy, 1)
+		elif getCell(dx, dy).type == Cell.Type.EMPTY:
+			setCell(x, y, Cell.Type.EMPTY)
+			setCell(dx, dy, Cell.Type.SAND)
 			markUpdate = true
 
 func updateGas(x: int, y: int) -> void:
 	var dx: int = clamp(x + (1 if randf() > .5 else -1), 0, width - 1)
 	var dy: int = clamp(y + (1 if randf() > .5 else -1), 0, height - 1)
 	
-	if getCell(dx, dy) == 0:
-		setCell(x, y, 0)
-		setCell(dx, dy, 2)
+	if getCell(dx, dy).type == Cell.Type.EMPTY:
+		setCell(x, y, Cell.Type.EMPTY)
+		setCell(dx, dy, Cell.Type.GAS)
 		markUpdate = true
+
+func updateWater(x: int, y: int) -> void:
+	pass
 
 func passToShader() -> void:
 	var image := Image.create(width, height, false, Image.FORMAT_RGB8)
 	image.fill(Color.BLACK)
 	for x in width:
 		for y in height:
-			var cell := getCell(x, y)
-			if cell == 1:
-				image.set_pixel(x, y, Color.SANDY_BROWN)
-			elif cell == 2:
-				image.set_pixel(x, y, Color.LIGHT_GRAY)
-			elif cell == 3:
-				image.set_pixel(x, y, Color.BLUE)
-			elif cell == 4:
-				image.set_pixel(x, y, Color.RED)
+			var cell: Cell = getCell(x, y)
+			match cell.type:
+				Cell.Type.SAND:
+					image.set_pixel(x, y, Color.SANDY_BROWN)
+				Cell.Type.GAS:
+					image.set_pixel(x, y, Color.LIGHT_GRAY)
+				Cell.Type.WATER:
+					image.set_pixel(x, y, Color.BLUE)
+				_:
+					pass
 	
 	var texture = ImageTexture.create_from_image(image)
 	colorRect.material.set_shader_parameter("tex", texture)
