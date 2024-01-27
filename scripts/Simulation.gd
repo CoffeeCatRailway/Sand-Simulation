@@ -79,7 +79,7 @@ func getOldCellv(pos: Vector2i) -> Cell:
 	return cellsOld[x][y]
 
 func markOldCellVisited(x: int, y: int, visited: bool = true):
-	return markOldCellVisitedv(Vector2i(x, y))
+	return markOldCellVisitedv(Vector2i(x, y), visited)
 
 func markOldCellVisitedv(pos: Vector2i, visited: bool = true):
 	var x := clampi(pos.x, 0, width - 1)
@@ -129,6 +129,7 @@ func simulate() -> void:
 	# Copy old cell states
 	for x in width:
 		for y in height:
+			markCellVisited(x, y, false)
 			cellsOld[x][y].type = cells[x][y].type
 			cellsOld[x][y].visited = cells[x][y].visited
 	
@@ -146,9 +147,9 @@ func simulate() -> void:
 				_:
 					pass
 	
-	for x in width:
-		for y in height:
-			markCellVisited(x, y, false)
+	#for x in width:
+		#for y in height:
+			#markCellVisited(x, y, false)
 
 func updateSand(x: int, y: int) -> void:
 	if y != height - 1:
