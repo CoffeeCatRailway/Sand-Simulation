@@ -60,6 +60,8 @@ func _process(delta) -> void:
 						var element := Cell.Type.SAND
 						if Input.is_action_pressed("ui_home"):
 							element = Cell.Type.GAS
+						elif Input.is_action_pressed("ui_end"):
+							element = Cell.Type.WATER
 						if getCellv(tempPos).type == Cell.Type.EMPTY:
 							setCellv(tempPos, element)
 							markCellVisitedv(tempPos)
@@ -110,6 +112,10 @@ func setCellv(pos: Vector2i, cellType: Cell.Type) -> void:
 
 func vec2iDist(a: Vector2i, b: Vector2i) -> float:
 	return sqrt(pow(a.x - b.x, 2.) + pow(a.y - b.y, 2.))
+
+# Returns true if inside simulation bounds
+func checkBounds(x: int, y: int) -> bool:
+	return x >= 0 && x < width && y >= 0 && y < height
 
 func _physics_process(delta) -> void:
 	simulate()
@@ -169,8 +175,45 @@ func updateGas(x: int, y: int) -> void:
 		setCell(dx, dy, Cell.Type.GAS)
 		markPassShader = true
 
+# https://stackoverflow.com/questions/66522958/water-in-a-falling-sand-simulation
 func updateWater(x: int, y: int) -> void:
-	pass
+	var down: bool = (getOldCell(x, y + 1).type == Cell.Type.EMPTY) && checkBounds(x, y + 1) && !getOldCell(x, y + 1).visited
+	var dLeft: bool = (getOldCell(x - 1, y + 1).type == Cell.Type.EMPTY) && checkBounds(x - 1, y + 1) && !getOldCell(x - 1, y + 1).visited
+	var dRight: bool = (getOldCell(x + 1, y + 1).type == Cell.Type.EMPTY) && checkBounds(x + 1, y + 1) && !getOldCell(x + 1, y + 1).visited
+	var left: bool = (getOldCell(x - 1, y).type == Cell.Type.EMPTY) && checkBounds(x - 1, y) && !getOldCell(x - 1, y).visited
+	var right: bool = (getOldCell(x + 1, y).type == Cell.Type.EMPTY) && checkBounds(x + 1, y) && !getOldCell(x + 1, y).visited
+	
+	# Choose random direction if both left & right
+	if dLeft && dRight:
+		if randf() > .5:
+			dLeft = false
+		else:
+			dRight = false
+	if left && right:
+		if randf() > .5:
+			left = false
+		else:
+			right = false
+	
+	if down:
+		setCell(x, y + 1, Cell.Type.WATER)
+		markOldCellVisited(x, y + 1)
+	elif dLeft:
+		setCell(x - 1, y + 1, Cell.Type.WATER)
+		markOldCellVisited(x - 1, y + 1)
+	elif dRight:
+		setCell(x + 1, y + 1, Cell.Type.WATER)
+		markOldCellVisited(x + 1, y + 1)
+	elif left:
+		setCell(x - 1, y, Cell.Type.WATER)
+		markOldCellVisited(x - 1, y)
+	elif right:
+		setCell(x + 1, y, Cell.Type.WATER)
+		markOldCellVisited(x + 1, y)
+	
+	if down || dLeft || dRight || left || right:
+		setCell(x, y, Cell.Type.EMPTY)
+		markPassShader = true
 
 func passToShader() -> void:
 	var image := Image.create(width, height, false, Image.FORMAT_RGB8)
