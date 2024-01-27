@@ -30,14 +30,14 @@ func _ready() -> void:
 		xIndicies.append(x)
 		for y in height:
 			data[x].append(0)
-			if x == 0 || y == 0 || x == width - 1 || y == height - 1:
-				setCell(x, y, 4)
+			#if x == 0 || y == 0 || x == width - 1 || y == height - 1:
+				#setCell(x, y, 4)
 	xIndicies.shuffle()
 	
 	#data[width / 2][height / 2] = 1 	# sand
 	#data[0][0] = 2						# gas
 	#data[width - 1][0] = 3				# green
-	#data[0][height - 2] = 4				# blue
+	#data[0][height - 1] = 4				# red
 	
 	#for x in width:
 		#for y in height:
@@ -110,26 +110,32 @@ func simulate() -> void:
 				continue
 			
 			if cell == 1: # sand
-				if y != height - 1:
-					var dx: int = clamp(x + (1 if randf() > .5 else -1), 0, width - 1)
-					var dy: int = clamp(y + 1, 0, height - 1)
-					
-					if getCell(x, dy) == 0:
-						setCell(x, y, 0)
-						setCell(x, dy, 1)
-						markUpdate = true
-					elif getCell(dx, dy) == 0:
-						setCell(x, y, 0)
-						setCell(dx, dy, 1)
-						markUpdate = true
+				updateSand(x, y)
 			elif cell == 2: # gas
-				var dx: int = clamp(x + (1 if randf() > .5 else -1), 0, width - 1)
-				var dy: int = clamp(y + (1 if randf() > .5 else -1), 0, height - 1)
-				
-				if getCell(dx, dy) == 0:
-					setCell(x, y, 0)
-					setCell(dx, dy, 2)
-					markUpdate = true
+				updateGas(x, y)
+
+func updateSand(x: int, y: int) -> void:
+	if y != height - 1:
+		var dx: int = clamp(x + (1 if randf() > .5 else -1), 0, width - 1)
+		var dy: int = clamp(y + 1, 0, height - 1)
+		
+		if getCell(x, dy) == 0:
+			setCell(x, y, 0)
+			setCell(x, dy, 1)
+			markUpdate = true
+		elif getCell(dx, dy) == 0:
+			setCell(x, y, 0)
+			setCell(dx, dy, 1)
+			markUpdate = true
+
+func updateGas(x: int, y: int) -> void:
+	var dx: int = clamp(x + (1 if randf() > .5 else -1), 0, width - 1)
+	var dy: int = clamp(y + (1 if randf() > .5 else -1), 0, height - 1)
+	
+	if getCell(dx, dy) == 0:
+		setCell(x, y, 0)
+		setCell(dx, dy, 2)
+		markUpdate = true
 
 func passToShader() -> void:
 	var image := Image.create(width, height, false, Image.FORMAT_RGB8)
@@ -142,9 +148,9 @@ func passToShader() -> void:
 			elif cell == 2:
 				image.set_pixel(x, y, Color.LIGHT_GRAY)
 			elif cell == 3:
-				image.set_pixel(x, y, Color.GREEN)
-			elif cell == 4:
 				image.set_pixel(x, y, Color.BLUE)
+			elif cell == 4:
+				image.set_pixel(x, y, Color.RED)
 	
 	var texture = ImageTexture.create_from_image(image)
 	colorRect.material.set_shader_parameter("tex", texture)
