@@ -11,3 +11,4 @@ export_presets.cfg
 # Mono-specific ignores
 .mono/
 data_*/
+addons/debug_draw_3d/libs/~libdd3d.windows.editor.x86_64.dll
