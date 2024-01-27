@@ -25,10 +25,16 @@ func _ready() -> void:
 	
 	# Fill array(s)
 	var yarr: Array[int] = []
-	yarr.resize(height)
-	yarr.fill(0)
-	data.resize(width)
-	data.fill(yarr)
+	#yarr.resize(height)
+	#yarr.fill(0)
+	#data.resize(width)
+	#data.fill(yarr)
+	for x in width:
+		data.append([])
+		for y in height:
+			data[x].append(0)
+			if x == 0 || y == 0 || x == width - 1 || y == height - 1:
+				setCell(x, y, 4)
 	#print(data.size(), "/", yarr.size())
 	
 	#data[width / 2][height / 2] = 1 	# sand
@@ -36,10 +42,10 @@ func _ready() -> void:
 	#data[width - 1][0] = 3				# green
 	#data[0][height - 2] = 4				# blue
 	
-	for x in range(0, width - 1):
-		for y in range(0, height - 1):
-			if x == 0 || y == 0 || x == width - 1 || y == height - 1:
-				setCell(x, y, 4)
+	#for x in width:
+		#for y in height:
+			#if x == 0 || y == 0 || x == width - 1 || y == height - 1:
+				#setCell(x, y, 4)
 	
 	# Initialze screen
 	passToShader()
@@ -62,10 +68,10 @@ func _process(delta) -> void:
 						if Input.is_action_pressed("ui_home"):
 							element = 2
 						if getCellv(tempPos) == 0:
-							setCell(x, y, element)
+							setCell(tempPos.x, tempPos.y, element)
 							markUpdate = true
 					if mouseRight:
-						setCell(x, y, 0)
+						setCell(tempPos.x, tempPos.y, 0)
 						markUpdate = true
 
 func getCell(x: int, y: int) -> int:
@@ -95,12 +101,13 @@ func _physics_process(delta) -> void:
 	
 	if markUpdate:
 		passToShader()
+		markUpdate = false
 
 func simulate() -> void:
-	for x in range(0, width - 1): # TODO: Shuffle x indecies & loop y,x
-		for y in range(0, height - 1):
+	for y in height:
+		for x in width: # TODO: Shuffle x indecies & loop y,x
 			var cell := getCell(x, y)
-			if cell != 0 && cell != 1:
+			if cell == 0 && cell == 4:
 				continue
 			
 			if cell == 1: # sand
@@ -128,8 +135,8 @@ func simulate() -> void:
 func passToShader() -> void:
 	var image := Image.create(width, height, false, Image.FORMAT_RGB8)
 	image.fill(Color.BLACK)
-	for x in range(0, width - 1):
-		for y in range(0, height - 1):
+	for x in width:
+		for y in height:
 			var cell := getCell(x, y)
 			if cell == 1:
 				image.set_pixel(x, y, Color.SANDY_BROWN)
