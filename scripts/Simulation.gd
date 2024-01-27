@@ -103,15 +103,16 @@ func _physics_process(delta) -> void:
 
 func simulate() -> void:
 	for y in height:
+		y = height - 1 - y # Need for gravity to not be instant
 		for x in xIndicies:
 			var cell := getCell(x, y)
 			if cell == 0 && cell == 4:
 				continue
 			
 			if cell == 1: # sand
-				if y != 0:
+				if y != height - 1:
 					var dx: int = clamp(x + (1 if randf() > .5 else -1), 0, width - 1)
-					var dy: int = clamp(y - 1, 0, height - 1)
+					var dy: int = clamp(y + 1, 0, height - 1)
 					
 					if getCell(x, dy) == 0:
 						setCell(x, y, 0)
