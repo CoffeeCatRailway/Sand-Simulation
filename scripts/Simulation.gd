@@ -9,6 +9,7 @@ var width: int
 var height: int
 
 var data: Array[Array] = []
+var xIndicies: Array[int] = []
 var markUpdate := false
 
 func _ready() -> void:
@@ -24,18 +25,14 @@ func _ready() -> void:
 	colorRect.material.set_shader_parameter("size", Vector2(width, height))
 	
 	# Fill array(s)
-	var yarr: Array[int] = []
-	#yarr.resize(height)
-	#yarr.fill(0)
-	#data.resize(width)
-	#data.fill(yarr)
 	for x in width:
 		data.append([])
+		xIndicies.append(x)
 		for y in height:
 			data[x].append(0)
 			if x == 0 || y == 0 || x == width - 1 || y == height - 1:
 				setCell(x, y, 4)
-	#print(data.size(), "/", yarr.size())
+	xIndicies.shuffle()
 	
 	#data[width / 2][height / 2] = 1 	# sand
 	#data[0][0] = 2						# gas
@@ -101,11 +98,12 @@ func _physics_process(delta) -> void:
 	
 	if markUpdate:
 		passToShader()
+		xIndicies.shuffle()
 		markUpdate = false
 
 func simulate() -> void:
 	for y in height:
-		for x in width: # TODO: Shuffle x indecies & loop y,x
+		for x in xIndicies:
 			var cell := getCell(x, y)
 			if cell == 0 && cell == 4:
 				continue
