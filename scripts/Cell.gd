@@ -1,36 +1,52 @@
 class_name Cell
 extends Resource
 
-@export var type: Type = Type.EMPTY
+@export var element: Elements = Elements.EMPTY
 @export var visited: bool = false
 #@export var color: Color = Color.BLACK
 
-enum Type
+enum Elements
 {
 	EMPTY,
 	SAND,
 	GAS,
-	WATER
+	WATER,
+	STONE
 }
 
 func getColor() -> Color:
-	match type:
-		Type.SAND:
+	match element:
+		Elements.SAND:
 			return Color.SANDY_BROWN
-		Type.GAS:
+		Elements.GAS:
 			return Color.LIGHT_GRAY
-		Type.WATER:
+		Elements.WATER:
 			return Color.CORNFLOWER_BLUE
+		Elements.STONE:
+			return Color.DIM_GRAY
 		_:
 			return Color.BLACK
 
 func getDensity() -> int: #0-100  0 being nothing
-	match type:
-		Type.SAND:
+	match element:
+		Elements.SAND:
 			return 20
-		Type.GAS:
+		Elements.GAS:
 			return 5
-		Type.WATER:
+		Elements.WATER:
 			return 10
+		Elements.STONE:
+			return 50
 		_:
 			return 0
+
+func isMovible() -> bool:
+	match element:
+		Elements.SAND:
+			return true
+		Elements.GAS:
+			return true
+		Elements.WATER:
+			return true
+		_:
+			return false

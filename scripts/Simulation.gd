@@ -6,7 +6,7 @@ extends Node2D
 
 @export var brushRadius: int = 3
 @export var squareBrush: bool = true
-var selectedElement := Cell.Type.SAND
+var selectedElement := Cell.Elements.SAND
 
 var width: int = 1
 var height: int = 1
@@ -36,7 +36,7 @@ func _ready() -> void:
 		xIndicies.append(x)
 		for y in height:
 			var emptyCell: Cell = Cell.new()
-			emptyCell.type = Cell.Type.EMPTY
+			emptyCell.element = Cell.Elements.EMPTY
 			cells[x].append(emptyCell)
 			cellsOld[x].append(emptyCell)
 			#if x == 0 || y == 0 || x == width - 1 || y == height - 1:
@@ -53,11 +53,13 @@ var isRemoveing := false
 func _input(event) -> void:
 	if event is InputEventKey:
 		if event.is_action_pressed("num1"):
-			selectedElement = Cell.Type.SAND
+			selectedElement = Cell.Elements.SAND
 		if event.is_action_pressed("num2"):
-			selectedElement = Cell.Type.GAS
+			selectedElement = Cell.Elements.GAS
 		if event.is_action_pressed("num3"):
-			selectedElement = Cell.Type.WATER
+			selectedElement = Cell.Elements.WATER
+		if event.is_action_pressed("num4"):
+			selectedElement = Cell.Elements.STONE
 	
 	if event is InputEventMouseMotion:
 		if event.velocity != Vector2.ZERO:
@@ -80,10 +82,10 @@ func handleMouse() -> void:
 				pos.y = mousePos.y + y
 				if vec2iDist(mousePos, pos) <= brushRadius || squareBrush:
 					if isRemoveing:
-						setCellv(pos, Cell.Type.EMPTY)
+						setCellv(pos, Cell.Elements.EMPTY)
 						markCellVisitedv(pos)
 					if isAdding:
-						if getCellv(pos).type == Cell.Type.EMPTY:
+						if getCellv(pos).element == Cell.Elements.EMPTY:
 							setCellv(pos, selectedElement)
 							markCellVisitedv(pos)
 		markPassShader = true
@@ -102,22 +104,22 @@ func simulate() -> void:
 	for x in width:
 		for y in height:
 			markCellVisited(x, y, false)
-			cellsOld[x][y].type = cells[x][y].type
+			cellsOld[x][y].element = cells[x][y].element
 			cellsOld[x][y].visited = cells[x][y].visited
 	
 	for y in height:
 		y = height - 1 - y # Need for gravity to not be instant
 		for x in xIndicies:
 			var cell: Cell = getOldCell(x, y)
-			match cell.type:
-				Cell.Type.SAND when !cell.visited:
+			match cell.element:
+				Cell.Elements.SAND when !cell.visited:
 					updateSand(x, y)
-				Cell.Type.GAS when !cell.visited:
+				Cell.Elements.GAS when !cell.visited:
 					updateGas(x, y)
-				Cell.Type.WATER when !cell.visited:
+				Cell.Elements.WATER when !cell.visited:
 					updateWater(x, y)
 				_:
-					pass
+					continue
 	
 	#for x in width:
 		#for y in height:
@@ -127,15 +129,15 @@ func updateSand(x: int, y: int) -> void:
 	if y != height - 1:
 		var dx: int = x + (1 if randf() > .5 else -1)
 		
-		if getCell(x, y + 1).type == Cell.Type.EMPTY:
-			setCell(x, y, Cell.Type.EMPTY)
+		if getCell(x, y + 1).element == Cell.Elements.EMPTY:
+			setCell(x, y, Cell.Elements.EMPTY)
 			markOldCellVisited(x, y)
-			setCell(x, y + 1, Cell.Type.SAND)
+			setCell(x, y + 1, Cell.Elements.SAND)
 			markPassShader = true
-		elif getCell(dx, y + 1).type == Cell.Type.EMPTY:
-			setCell(x, y, Cell.Type.EMPTY)
+		elif getCell(dx, y + 1).element == Cell.Elements.EMPTY:
+			setCell(x, y, Cell.Elements.EMPTY)
 			markOldCellVisited(x, y)
-			setCell(dx, y + 1, Cell.Type.SAND)
+			setCell(dx, y + 1, Cell.Elements.SAND)
 			markPassShader = true
 
 func updateGas(x: int, y: int) -> void:
@@ -143,20 +145,20 @@ func updateGas(x: int, y: int) -> void:
 		var dx: int = x + (1 if randf() > .5 else -1)
 		var dy: int = y + (1 if randf() > .5 else -1)
 		
-		if getCell(dx, dy).type == Cell.Type.EMPTY:
-			setCell(x, y, Cell.Type.EMPTY)
+		if getCell(dx, dy).element == Cell.Elements.EMPTY:
+			setCell(x, y, Cell.Elements.EMPTY)
 			markOldCellVisited(x, y)
-			setCell(dx, dy, Cell.Type.GAS)
+			setCell(dx, dy, Cell.Elements.GAS)
 			markPassShader = true
 
 # https://stackoverflow.com/questions/66522958/water-in-a-falling-sand-simulation
 func updateWater(x: int, y: int) -> void:
 	if !compareDensity(x, y, false):
-		var down: bool = (getOldCell(x, y + 1).type == Cell.Type.EMPTY) && checkBounds(x, y + 1) && !getOldCell(x, y + 1).visited
-		var dLeft: bool = (getOldCell(x - 1, y + 1).type == Cell.Type.EMPTY) && checkBounds(x - 1, y + 1) && !getOldCell(x - 1, y + 1).visited
-		var dRight: bool = (getOldCell(x + 1, y + 1).type == Cell.Type.EMPTY) && checkBounds(x + 1, y + 1) && !getOldCell(x + 1, y + 1).visited
-		var left: bool = (getOldCell(x - 1, y).type == Cell.Type.EMPTY) && checkBounds(x - 1, y) && !getOldCell(x - 1, y).visited
-		var right: bool = (getOldCell(x + 1, y).type == Cell.Type.EMPTY) && checkBounds(x + 1, y) && !getOldCell(x + 1, y).visited
+		var down: bool = (getOldCell(x, y + 1).element == Cell.Elements.EMPTY) && checkBounds(x, y + 1) && !getOldCell(x, y + 1).visited
+		var dLeft: bool = (getOldCell(x - 1, y + 1).element == Cell.Elements.EMPTY) && checkBounds(x - 1, y + 1) && !getOldCell(x - 1, y + 1).visited
+		var dRight: bool = (getOldCell(x + 1, y + 1).element == Cell.Elements.EMPTY) && checkBounds(x + 1, y + 1) && !getOldCell(x + 1, y + 1).visited
+		var left: bool = (getOldCell(x - 1, y).element == Cell.Elements.EMPTY) && checkBounds(x - 1, y) && !getOldCell(x - 1, y).visited
+		var right: bool = (getOldCell(x + 1, y).element == Cell.Elements.EMPTY) && checkBounds(x + 1, y) && !getOldCell(x + 1, y).visited
 		
 		# Choose random direction if both left & right
 		if dLeft && dRight:
@@ -171,30 +173,30 @@ func updateWater(x: int, y: int) -> void:
 				right = false
 		
 		if down:
-			setCell(x, y + 1, Cell.Type.WATER)
+			setCell(x, y + 1, Cell.Elements.WATER)
 			markOldCellVisited(x, y + 1)
 		elif dLeft:
-			setCell(x - 1, y + 1, Cell.Type.WATER)
+			setCell(x - 1, y + 1, Cell.Elements.WATER)
 			markOldCellVisited(x - 1, y + 1)
 		elif dRight:
-			setCell(x + 1, y + 1, Cell.Type.WATER)
+			setCell(x + 1, y + 1, Cell.Elements.WATER)
 			markOldCellVisited(x + 1, y + 1)
 		elif left:
-			setCell(x - 1, y, Cell.Type.WATER)
+			setCell(x - 1, y, Cell.Elements.WATER)
 			markOldCellVisited(x - 1, y)
 		elif right:
-			setCell(x + 1, y, Cell.Type.WATER)
+			setCell(x + 1, y, Cell.Elements.WATER)
 			markOldCellVisited(x + 1, y)
 		
 		if down || dLeft || dRight || left || right:
-			setCell(x, y, Cell.Type.EMPTY)
+			setCell(x, y, Cell.Elements.EMPTY)
 			markPassShader = true
 
 # if simulate is true cells won't be swapped
 func compareDensity(x: int, y: int, _simulate: bool) -> bool:
-	var cellTypeUp := getCell(x, y - 1).type
-	var cellType := getCell(x, y).type
-	if getCell(x, y).getDensity() < getCell(x, y - 1).getDensity():
+	var cellTypeUp := getCell(x, y - 1).element
+	var cellType := getCell(x, y).element
+	if getCell(x, y - 1).isMovible() && getCell(x, y).getDensity() < getCell(x, y - 1).getDensity():
 		if !_simulate:
 			setCell(x, y - 1, cellType)
 			setCell(x, y, cellTypeUp)
@@ -209,7 +211,7 @@ func passToShader() -> void:
 	for x in width:
 		for y in height:
 			var cell: Cell = getCell(x, y)
-			if cell.type != Cell.Type.EMPTY:
+			if cell.element != Cell.Elements.EMPTY:
 				image.set_pixel(x, y, cell.getColor())
 	
 	var texture = ImageTexture.create_from_image(image)
@@ -249,13 +251,13 @@ func markCellVisitedv(pos: Vector2i, visited: bool = true):
 	var y := clampi(pos.y, 0, height - 1)
 	cells[x][y].visited = visited
 
-func setCell(x: int, y: int, cellType: Cell.Type) -> void:
-	setCellv(Vector2i(x, y), cellType)
+func setCell(x: int, y: int, element: Cell.Elements) -> void:
+	setCellv(Vector2i(x, y), element)
 
-func setCellv(pos: Vector2i, cellType: Cell.Type) -> void:
+func setCellv(pos: Vector2i, element: Cell.Elements) -> void:
 	var x := clampi(pos.x, 0, width - 1)
 	var y := clampi(pos.y, 0, height - 1)
-	cells[x][y].type = cellType
+	cells[x][y].element = element
 
 func vec2iDist(a: Vector2i, b: Vector2i) -> float:
 	return sqrt(pow(a.x - b.x, 2.) + pow(a.y - b.y, 2.))

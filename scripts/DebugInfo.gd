@@ -1,13 +1,19 @@
 extends Node
 
 @export var sim: Simulation
+var elementString: String = ""
 
 func _ready() -> void:
 	var graphFps := DebugDraw2D.create_graph("graph_fps")
 	graphFps.show_title = true
+	
+	for i in Cell.Elements.size():
+		if i == 0: # Ignore empty
+			continue
+		elementString += "%s (%s)  " % [Cell.Elements.keys()[i], i]
 
 func _process(delta) -> void:
-	DebugDraw2D.set_text("Sand (1)  Gas (2)  Water (3)", null, -10)
+	DebugDraw2D.set_text(elementString, null, -10)
 	DebugDraw2D.set_text("Selected", sim.selectedElement, -9)
 	DebugDraw2D.set_text("---Stats---", null, -1)
 	
@@ -21,7 +27,7 @@ func _process(delta) -> void:
 	for x in sim.width:
 		for y in sim.height:
 			var cell := sim.getCell(x, y)
-			if cell.type != Cell.Type.EMPTY:
+			if cell.element != Cell.Elements.EMPTY:
 				cells += 1
 				#if cell.visited:
 					#visitedCells += 1
