@@ -219,11 +219,11 @@ func updateWater(x: int, y: int) -> void:
 			markPassShader = true
 
 # if simulate is true cells won't be swapped
-func compareDensity(x: int, y: int, simulate: bool) -> bool:
+func compareDensity(x: int, y: int, _simulate: bool) -> bool:
 	var cellTypeUp := getCell(x, y - 1).type
 	var cellType := getCell(x, y).type
 	if getCell(x, y).getDensity() < getCell(x, y - 1).getDensity():
-		if !simulate:
+		if !_simulate:
 			setCell(x, y - 1, cellType)
 			setCell(x, y, cellTypeUp)
 			markOldCellVisited(x, y - 1)
