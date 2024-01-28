@@ -6,10 +6,10 @@ extends Node2D
 
 @export var brushRadius: int = 3
 @export var squareBrush: bool = true
-var selectedElement: Cell.Type = Cell.Type.SAND
+var selectedElement := Cell.Type.SAND
 
-var width: int
-var height: int
+var width: int = 1
+var height: int = 1
 
 var cells: Array[Array] = []
 var cellsOld: Array[Array] = []
@@ -46,87 +46,50 @@ func _ready() -> void:
 	# Initialze screen
 	passToShader()
 
-#func _input(event) -> void:
-	#if event is InputEventMouse:
-		#event.position
+var mousePos := Vector2i.ZERO
+var isAdding := false
+var isRemoveing := false
 
-func _process(delta) -> void:
-	if Input.is_action_just_pressed("num1"):
-		selectedElement = Cell.Type.SAND
-	elif Input.is_action_just_pressed("num2"):
-		selectedElement = Cell.Type.GAS
-	elif Input.is_action_just_pressed("num3"):
-		selectedElement = Cell.Type.WATER
+func _input(event) -> void:
+	if event is InputEventKey:
+		if event.is_action_pressed("num1"):
+			selectedElement = Cell.Type.SAND
+		if event.is_action_pressed("num2"):
+			selectedElement = Cell.Type.GAS
+		if event.is_action_pressed("num3"):
+			selectedElement = Cell.Type.WATER
 	
+	if event is InputEventMouseMotion:
+		if event.velocity != Vector2.ZERO:
+			mousePos = Vector2i(event.position) / cellSize
 	
-	var mouseLeft := Input.is_action_pressed("mouse_left")
-	var mouseRight := Input.is_action_pressed("mouse_right")
-	
-	if mouseLeft || mouseRight:
-		var tempPos := Vector2i.ZERO
-		var mPos := Vector2i(get_local_mouse_position()) / cellSize
+	if event is InputEventMouseButton:
+		isAdding = event.is_action_pressed("mouse_left")
+		isRemoveing = event.is_action_pressed("mouse_right")
+
+#func _process(delta) -> void:
+	#handleMouse()
+	#mousePos = Vector2i(get_local_mouse_position()) / cellSize
+
+func handleMouse() -> void:
+	if isAdding || isRemoveing:
+		var pos := Vector2i.ZERO
 		for x in range(-brushRadius, brushRadius + 1):
 			for y in range(-brushRadius, brushRadius + 1):
-				tempPos.x = mPos.x + x
-				tempPos.y = mPos.y + y
-				if vec2iDist(mPos, tempPos) <= brushRadius || squareBrush:
-					if mouseRight:
-						setCellv(tempPos, Cell.Type.EMPTY)
-						markCellVisitedv(tempPos)
-					if mouseLeft:
-						if getCellv(tempPos).type == Cell.Type.EMPTY:
-							setCellv(tempPos, selectedElement)
-							markCellVisitedv(tempPos)
+				pos.x = mousePos.x + x
+				pos.y = mousePos.y + y
+				if vec2iDist(mousePos, pos) <= brushRadius || squareBrush:
+					if isRemoveing:
+						setCellv(pos, Cell.Type.EMPTY)
+						markCellVisitedv(pos)
+					if isAdding:
+						if getCellv(pos).type == Cell.Type.EMPTY:
+							setCellv(pos, selectedElement)
+							markCellVisitedv(pos)
 		markPassShader = true
 
-func getOldCell(x: int, y: int) -> Cell:
-	return getOldCellv(Vector2i(x, y))
-
-func getOldCellv(pos: Vector2i) -> Cell:
-	var x := clampi(pos.x, 0, width - 1)
-	var y := clampi(pos.y, 0, height - 1)
-	return cellsOld[x][y]
-
-func markOldCellVisited(x: int, y: int, visited: bool = true):
-	return markOldCellVisitedv(Vector2i(x, y), visited)
-
-func markOldCellVisitedv(pos: Vector2i, visited: bool = true):
-	var x := clampi(pos.x, 0, width - 1)
-	var y := clampi(pos.y, 0, height - 1)
-	cellsOld[x][y].visited = visited
-
-func getCell(x: int, y: int) -> Cell:
-	return getCellv(Vector2i(x, y))
-
-func getCellv(pos: Vector2i) -> Cell:
-	var x := clampi(pos.x, 0, width - 1)
-	var y := clampi(pos.y, 0, height - 1)
-	return cells[x][y]
-
-func markCellVisited(x: int, y: int, visited: bool = true):
-	return markCellVisitedv(Vector2i(x, y), visited)
-
-func markCellVisitedv(pos: Vector2i, visited: bool = true):
-	var x := clampi(pos.x, 0, width - 1)
-	var y := clampi(pos.y, 0, height - 1)
-	cells[x][y].visited = visited
-
-func setCell(x: int, y: int, cellType: Cell.Type) -> void:
-	setCellv(Vector2i(x, y), cellType)
-
-func setCellv(pos: Vector2i, cellType: Cell.Type) -> void:
-	var x := clampi(pos.x, 0, width - 1)
-	var y := clampi(pos.y, 0, height - 1)
-	cells[x][y].type = cellType
-
-func vec2iDist(a: Vector2i, b: Vector2i) -> float:
-	return sqrt(pow(a.x - b.x, 2.) + pow(a.y - b.y, 2.))
-
-# Returns true if inside simulation bounds
-func checkBounds(x: int, y: int) -> bool:
-	return x >= 0 && x < width && y >= 0 && y < height
-
 func _physics_process(delta) -> void:
+	handleMouse()
 	simulate()
 	
 	if markPassShader:
@@ -251,3 +214,52 @@ func passToShader() -> void:
 	
 	var texture = ImageTexture.create_from_image(image)
 	colorRect.material.set_shader_parameter("tex", texture)
+
+## Util methods ##
+
+func getOldCell(x: int, y: int) -> Cell:
+	return getOldCellv(Vector2i(x, y))
+
+func getOldCellv(pos: Vector2i) -> Cell:
+	var x := clampi(pos.x, 0, width - 1)
+	var y := clampi(pos.y, 0, height - 1)
+	return cellsOld[x][y]
+
+func markOldCellVisited(x: int, y: int, visited: bool = true):
+	return markOldCellVisitedv(Vector2i(x, y), visited)
+
+func markOldCellVisitedv(pos: Vector2i, visited: bool = true):
+	var x := clampi(pos.x, 0, width - 1)
+	var y := clampi(pos.y, 0, height - 1)
+	cellsOld[x][y].visited = visited
+
+func getCell(x: int, y: int) -> Cell:
+	return getCellv(Vector2i(x, y))
+
+func getCellv(pos: Vector2i) -> Cell:
+	var x := clampi(pos.x, 0, width - 1)
+	var y := clampi(pos.y, 0, height - 1)
+	return cells[x][y]
+
+func markCellVisited(x: int, y: int, visited: bool = true):
+	return markCellVisitedv(Vector2i(x, y), visited)
+
+func markCellVisitedv(pos: Vector2i, visited: bool = true):
+	var x := clampi(pos.x, 0, width - 1)
+	var y := clampi(pos.y, 0, height - 1)
+	cells[x][y].visited = visited
+
+func setCell(x: int, y: int, cellType: Cell.Type) -> void:
+	setCellv(Vector2i(x, y), cellType)
+
+func setCellv(pos: Vector2i, cellType: Cell.Type) -> void:
+	var x := clampi(pos.x, 0, width - 1)
+	var y := clampi(pos.y, 0, height - 1)
+	cells[x][y].type = cellType
+
+func vec2iDist(a: Vector2i, b: Vector2i) -> float:
+	return sqrt(pow(a.x - b.x, 2.) + pow(a.y - b.y, 2.))
+
+# Returns true if inside simulation bounds
+func checkBounds(x: int, y: int) -> bool:
+	return x >= 0 && x < width && y >= 0 && y < height
