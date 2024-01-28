@@ -5,7 +5,7 @@ extends Node2D
 @export var cellSize: int = 10
 
 @export var brushRadius: int = 3
-@export var squareBrush: bool = true
+@export var squareBrush: bool = false
 var selectedElement := Cell.Elements.SAND
 
 var width: int = 1
@@ -52,6 +52,9 @@ var isRemoveing := false
 
 func _input(event) -> void:
 	if event is InputEventKey:
+		if event.is_action_released("brush_shape"):
+			squareBrush = !squareBrush
+		
 		if event.is_action_pressed("num1"):
 			selectedElement = Cell.Elements.SAND
 		if event.is_action_pressed("num2"):
@@ -66,6 +69,11 @@ func _input(event) -> void:
 			mousePos = Vector2i(event.position) / cellSize
 	
 	if event is InputEventMouseButton:
+		if event.button_index == MOUSE_BUTTON_WHEEL_UP && event.pressed:
+			brushRadius = min(100, brushRadius + 1)
+		elif event.button_index == MOUSE_BUTTON_WHEEL_DOWN && event.pressed:
+			brushRadius = max(0, brushRadius - 1)
+		
 		isAdding = event.is_action_pressed("mouse_left")
 		isRemoveing = event.is_action_pressed("mouse_right")
 

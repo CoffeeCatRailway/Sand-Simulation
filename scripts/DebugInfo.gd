@@ -15,6 +15,8 @@ func _ready() -> void:
 func _process(delta) -> void:
 	DebugDraw2D.set_text(elementString, null, -10)
 	DebugDraw2D.set_text("Selected", sim.selectedElement, -9)
+	DebugDraw2D.set_text("Brush size (scroll)", sim.brushRadius, -8)
+	DebugDraw2D.set_text("Square brush", sim.squareBrush, -7)
 	DebugDraw2D.set_text("---Stats---", null, -1)
 	
 	DebugDraw2D.set_text("Frames", Engine.get_frames_drawn())
