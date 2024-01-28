@@ -167,54 +167,69 @@ func updateSand(x: int, y: int) -> void:
 			markPassShader = true
 
 func updateGas(x: int, y: int) -> void:
-	var dx: int = x + (1 if randf() > .5 else -1)
-	var dy: int = y + (1 if randf() > .5 else -1)
-	
-	if getCell(dx, dy).type == Cell.Type.EMPTY:
-		setCell(x, y, Cell.Type.EMPTY)
-		markOldCellVisited(x, y)
-		setCell(dx, dy, Cell.Type.GAS)
-		markPassShader = true
+	if !compareDensity(x, y, false):
+		var dx: int = x + (1 if randf() > .5 else -1)
+		var dy: int = y + (1 if randf() > .5 else -1)
+		
+		if getCell(dx, dy).type == Cell.Type.EMPTY:
+			setCell(x, y, Cell.Type.EMPTY)
+			markOldCellVisited(x, y)
+			setCell(dx, dy, Cell.Type.GAS)
+			markPassShader = true
 
 # https://stackoverflow.com/questions/66522958/water-in-a-falling-sand-simulation
 func updateWater(x: int, y: int) -> void:
-	var down: bool = (getOldCell(x, y + 1).type == Cell.Type.EMPTY) && checkBounds(x, y + 1) && !getOldCell(x, y + 1).visited
-	var dLeft: bool = (getOldCell(x - 1, y + 1).type == Cell.Type.EMPTY) && checkBounds(x - 1, y + 1) && !getOldCell(x - 1, y + 1).visited
-	var dRight: bool = (getOldCell(x + 1, y + 1).type == Cell.Type.EMPTY) && checkBounds(x + 1, y + 1) && !getOldCell(x + 1, y + 1).visited
-	var left: bool = (getOldCell(x - 1, y).type == Cell.Type.EMPTY) && checkBounds(x - 1, y) && !getOldCell(x - 1, y).visited
-	var right: bool = (getOldCell(x + 1, y).type == Cell.Type.EMPTY) && checkBounds(x + 1, y) && !getOldCell(x + 1, y).visited
-	
-	# Choose random direction if both left & right
-	if dLeft && dRight:
-		if randf() > .5:
-			dLeft = false
-		else:
-			dRight = false
-	if left && right:
-		if randf() > .5:
-			left = false
-		else:
-			right = false
-	
-	if down:
-		setCell(x, y + 1, Cell.Type.WATER)
-		markOldCellVisited(x, y + 1)
-	elif dLeft:
-		setCell(x - 1, y + 1, Cell.Type.WATER)
-		markOldCellVisited(x - 1, y + 1)
-	elif dRight:
-		setCell(x + 1, y + 1, Cell.Type.WATER)
-		markOldCellVisited(x + 1, y + 1)
-	elif left:
-		setCell(x - 1, y, Cell.Type.WATER)
-		markOldCellVisited(x - 1, y)
-	elif right:
-		setCell(x + 1, y, Cell.Type.WATER)
-		markOldCellVisited(x + 1, y)
-	
-	if down || dLeft || dRight || left || right:
-		setCell(x, y, Cell.Type.EMPTY)
-		markPassShader = true
+	if !compareDensity(x, y, false):
+		var down: bool = (getOldCell(x, y + 1).type == Cell.Type.EMPTY) && checkBounds(x, y + 1) && !getOldCell(x, y + 1).visited
+		var dLeft: bool = (getOldCell(x - 1, y + 1).type == Cell.Type.EMPTY) && checkBounds(x - 1, y + 1) && !getOldCell(x - 1, y + 1).visited
+		var dRight: bool = (getOldCell(x + 1, y + 1).type == Cell.Type.EMPTY) && checkBounds(x + 1, y + 1) && !getOldCell(x + 1, y + 1).visited
+		var left: bool = (getOldCell(x - 1, y).type == Cell.Type.EMPTY) && checkBounds(x - 1, y) && !getOldCell(x - 1, y).visited
+		var right: bool = (getOldCell(x + 1, y).type == Cell.Type.EMPTY) && checkBounds(x + 1, y) && !getOldCell(x + 1, y).visited
+		
+		# Choose random direction if both left & right
+		if dLeft && dRight:
+			if randf() > .5:
+				dLeft = false
+			else:
+				dRight = false
+		if left && right:
+			if randf() > .5:
+				left = false
+			else:
+				right = false
+		
+		if down:
+			setCell(x, y + 1, Cell.Type.WATER)
+			markOldCellVisited(x, y + 1)
+		elif dLeft:
+			setCell(x - 1, y + 1, Cell.Type.WATER)
+			markOldCellVisited(x - 1, y + 1)
+		elif dRight:
+			setCell(x + 1, y + 1, Cell.Type.WATER)
+			markOldCellVisited(x + 1, y + 1)
+		elif left:
+			setCell(x - 1, y, Cell.Type.WATER)
+			markOldCellVisited(x - 1, y)
+		elif right:
+			setCell(x + 1, y, Cell.Type.WATER)
+			markOldCellVisited(x + 1, y)
+		
+		if down || dLeft || dRight || left || right:
+			setCell(x, y, Cell.Type.EMPTY)
+			markPassShader = true
+
+# if simulate is true cells won't be swapped
+func compareDensity(x: int, y: int, simulate: bool) -> bool:
+	var cellTypeUp := getCell(x, y - 1).type
+	var cellType := getCell(x, y).type
+	if getCell(x, y).getDensity() < getCell(x, y - 1).getDensity():
+		if !simulate:
+			setCell(x, y - 1, cellType)
+			setCell(x, y, cellTypeUp)
+			markOldCellVisited(x, y - 1)
+			markPassShader = true
+		return true
+	return false
 
 func passToShader() -> void:
 	var image := Image.create(width, height, false, Image.FORMAT_RGB8)
@@ -222,15 +237,8 @@ func passToShader() -> void:
 	for x in width:
 		for y in height:
 			var cell: Cell = getCell(x, y)
-			match cell.type:
-				Cell.Type.SAND:
-					image.set_pixel(x, y, Color.SANDY_BROWN)
-				Cell.Type.GAS:
-					image.set_pixel(x, y, Color.LIGHT_GRAY)
-				Cell.Type.WATER:
-					image.set_pixel(x, y, Color.BLUE)
-				_:
-					pass
+			if cell.type != Cell.Type.EMPTY:
+				image.set_pixel(x, y, cell.getColor())
 	
 	var texture = ImageTexture.create_from_image(image)
 	colorRect.material.set_shader_parameter("tex", texture)
