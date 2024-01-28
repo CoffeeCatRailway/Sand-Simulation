@@ -3,8 +3,10 @@ extends Node2D
 
 @onready var colorRect: ColorRect = $CanvasLayer/Control/ColorRect
 @export var cellSize: int = 10
+
 @export var brushRadius: int = 3
 @export var squareBrush: bool = true
+var selectedElement: Cell.Type = Cell.Type.SAND
 
 var width: int
 var height: int
@@ -44,7 +46,19 @@ func _ready() -> void:
 	# Initialze screen
 	passToShader()
 
+#func _input(event) -> void:
+	#if event is InputEventMouse:
+		#event.position
+
 func _process(delta) -> void:
+	if Input.is_action_just_pressed("num1"):
+		selectedElement = Cell.Type.SAND
+	elif Input.is_action_just_pressed("num2"):
+		selectedElement = Cell.Type.GAS
+	elif Input.is_action_just_pressed("num3"):
+		selectedElement = Cell.Type.WATER
+	
+	
 	var mouseLeft := Input.is_action_pressed("mouse_left")
 	var mouseRight := Input.is_action_pressed("mouse_right")
 	
@@ -56,18 +70,13 @@ func _process(delta) -> void:
 				tempPos.x = mPos.x + x
 				tempPos.y = mPos.y + y
 				if vec2iDist(mPos, tempPos) <= brushRadius || squareBrush:
-					if mouseLeft:
-						var element := Cell.Type.SAND
-						if Input.is_action_pressed("ui_home"):
-							element = Cell.Type.GAS
-						elif Input.is_action_pressed("ui_end"):
-							element = Cell.Type.WATER
-						if getCellv(tempPos).type == Cell.Type.EMPTY:
-							setCellv(tempPos, element)
-							markCellVisitedv(tempPos)
 					if mouseRight:
 						setCellv(tempPos, Cell.Type.EMPTY)
 						markCellVisitedv(tempPos)
+					if mouseLeft:
+						if getCellv(tempPos).type == Cell.Type.EMPTY:
+							setCellv(tempPos, selectedElement)
+							markCellVisitedv(tempPos)
 		markPassShader = true
 
 func getOldCell(x: int, y: int) -> Cell:
