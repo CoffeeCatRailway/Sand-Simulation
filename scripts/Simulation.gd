@@ -140,16 +140,17 @@ func simulate() -> void:
 func updateSand(x: int, y: int, element: Cell.Elements) -> void:
 	var dx: int = x + (1 if randf() > .5 else -1)
 	var down: bool = (getOldCell(x, y + 1).element == Cell.Elements.EMPTY) && checkBounds(x, y + 1) && !getOldCell(x, y + 1).visited
-	var side: bool = (getOldCell(dx, y + 1).element == Cell.Elements.EMPTY) && checkBounds(dx, y + 1) && !getOldCell(dx, y + 1).visited
+	var side: bool = (getOldCell(dx, y).element == Cell.Elements.EMPTY) && checkBounds(dx, y) && !getOldCell(dx, y).visited
+	var sided: bool = side && (getOldCell(dx, y + 1).element == Cell.Elements.EMPTY) && checkBounds(dx, y + 1) && !getOldCell(dx, y + 1).visited
 	
 	if down:
 		setCell(x, y + 1, element)
 		markOldCellVisited(x, y + 1)
-	elif side:
+	elif sided:
 		setCell(dx, y + 1, element)
 		markOldCellVisited(dx, y + 1)
 	
-	if down || side:
+	if down || sided:
 		setCell(x, y, Cell.Elements.EMPTY)
 		markPassShader = true
 
