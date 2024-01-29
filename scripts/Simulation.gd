@@ -14,6 +14,7 @@ var height: int = 1
 var cells: Array[Array] = []
 var cellsOld: Array[Array] = []
 var xIndicies: Array[int] = []
+var colorArray: PackedColorArray = PackedColorArray()
 
 var markPassShader := false
 
@@ -27,13 +28,14 @@ func _ready() -> void:
 	colorRect.material.set_shader_parameter("size", Vector2(width, height))
 	
 	# Fill array(s)
+	colorArray.resize(width * height)
 	for x in width:
 		cells.append([])
 		cellsOld.append([])
 		xIndicies.append(x)
 		for y in height:
 			var emptyCell: Cell = Cell.new()
-			emptyCell.element = Cell.Elements.EMPTY
+			colorArray[y * width + x] = emptyCell.getColor()
 			cells[x].append(emptyCell)
 			cellsOld[x].append(emptyCell)
 			#if x == 0 || y == 0 || x == width - 1 || y == height - 1:
@@ -60,6 +62,8 @@ func _input(event) -> void:
 			selectedElement = Cell.Elements.WATER
 		if event.is_action_pressed("num4"):
 			selectedElement = Cell.Elements.STONE
+		if event.is_action_pressed("num5"):
+			selectedElement = Cell.Elements.RAINBOW_DUST
 	
 	if event is InputEventMouseMotion:
 		if event.velocity != Vector2.ZERO:
@@ -124,6 +128,8 @@ func simulate() -> void:
 					updateGas(x, y, Cell.Elements.GAS)
 				Cell.Elements.WATER when !cell.visited:
 					updateLiquid(x, y, Cell.Elements.WATER)
+				Cell.Elements.RAINBOW_DUST when !cell.visited:
+					updateSand(x, y, Cell.Elements.RAINBOW_DUST)
 				_:
 					continue
 	
@@ -211,7 +217,8 @@ func passToShader() -> void:
 		for y in height:
 			var cell: Cell = getCell(x, y)
 			if cell.element != Cell.Elements.EMPTY:
-				image.set_pixel(x, y, cell.getColor())
+				image.set_pixel(x, y, colorArray[y * width + x])
+				#image.set_pixel(x, y, cell.getColor())
 	
 	var texture = ImageTexture.create_from_image(image)
 	colorRect.material.set_shader_parameter("tex", texture)
@@ -257,6 +264,7 @@ func setCellv(pos: Vector2i, element: Cell.Elements) -> void:
 	var x := clampi(pos.x, 0, width - 1)
 	var y := clampi(pos.y, 0, height - 1)
 	cells[x][y].element = element
+	colorArray[y * width + x] = cells[x][y].getColor()
 
 func vec2iDist(a: Vector2i, b: Vector2i) -> float:
 	return sqrt(pow(a.x - b.x, 2.) + pow(a.y - b.y, 2.))

@@ -1,9 +1,30 @@
 class_name Cell
 extends Resource
 
-@export var element: Elements = Elements.EMPTY
-@export var visited: bool = false
-#@export var color: Color = Color.BLACK
+var element: Elements = Elements.EMPTY
+var visited: bool = false
+#var r: int = 0
+#var g: int = 0
+#var b: int = 0
+
+#func _init(cell: Cell = null, element: Elements = Elements.EMPTY, customColor: Color = Color(0, 0, 0, 1)):
+	#if cell == null:
+		#self.element = element
+		#if !customColor:
+			#var color = getColor()
+			#self.r = color.r8
+			#self.g = color.g8
+			#self.b = color.b8
+		#else:
+			#self.r = customColor.r8
+			#self.g = customColor.g8
+			#self.b = customColor.b8
+	#else:
+		#self.element = cell.element
+		#self.visited = cell.visited
+		#self.r = cell.r
+		#self.g = cell.g
+		#self.b = cell.b
 
 enum Elements
 {
@@ -11,7 +32,8 @@ enum Elements
 	SAND,
 	GAS,
 	WATER,
-	STONE
+	STONE,
+	RAINBOW_DUST
 }
 
 func getColor() -> Color:
@@ -25,9 +47,12 @@ func getColor() -> Color:
 			res = Color.CORNFLOWER_BLUE
 		Elements.STONE:
 			res = Color.DIM_GRAY
+		Elements.RAINBOW_DUST:
+			var hue = fmod(Time.get_unix_time_from_system(), 10.)
+			return Color.from_hsv(hue / 10., 1., .8)
 		_:
 			return Color.BLACK
-	res.v -= randf_range(.1, .3)
+	res.v -= randf_range(0., .1)
 	return res
 
 func getDensity() -> int: #0-100  0 being nothing
@@ -40,16 +65,14 @@ func getDensity() -> int: #0-100  0 being nothing
 			return 10
 		Elements.STONE:
 			return 50
+		Elements.RAINBOW_DUST:
+			return 20
 		_:
 			return 0
 
 func isMovible() -> bool:
 	match element:
-		Elements.SAND:
-			return true
-		Elements.GAS:
-			return true
-		Elements.WATER:
-			return true
-		_:
+		Elements.STONE:
 			return false
+		_:
+			return true
