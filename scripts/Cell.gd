@@ -15,17 +15,20 @@ enum Elements
 }
 
 func getColor() -> Color:
+	var res: Color
 	match element:
 		Elements.SAND:
-			return Color.SANDY_BROWN
+			res = Color.SANDY_BROWN
 		Elements.GAS:
-			return Color.LIGHT_GRAY
+			res = Color.LIGHT_GRAY
 		Elements.WATER:
-			return Color.CORNFLOWER_BLUE
+			res = Color.CORNFLOWER_BLUE
 		Elements.STONE:
-			return Color.DIM_GRAY
+			res = Color.DIM_GRAY
 		_:
 			return Color.BLACK
+	res.v -= randf_range(.1, .3)
+	return res
 
 func getDensity() -> int: #0-100  0 being nothing
 	match element:
