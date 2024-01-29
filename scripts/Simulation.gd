@@ -18,9 +18,6 @@ var xIndicies: Array[int] = []
 var markPassShader := false
 
 func _ready() -> void:
-	print("Brush radius: ", brushRadius)
-	print("Brush type: ", ("Square" if squareBrush else "Circle"))
-	
 	# Calculate width/height
 	var control := Vector2i($CanvasLayer/Control.size)
 	width = control.x / cellSize
@@ -71,7 +68,7 @@ func _input(event) -> void:
 	
 	if event is InputEventMouseButton:
 		if event.button_index == MOUSE_BUTTON_WHEEL_UP && event.pressed:
-			brushRadius = min(100, brushRadius + 1)
+			brushRadius = min(99, brushRadius + 1)
 		elif event.button_index == MOUSE_BUTTON_WHEEL_DOWN && event.pressed:
 			brushRadius = max(0, brushRadius - 1)
 		
@@ -122,11 +119,11 @@ func simulate() -> void:
 			var cell: Cell = getOldCell(x, y)
 			match cell.element:
 				Cell.Elements.SAND when !cell.visited:
-					updateSand(x, y)
+					updateSand(x, y, Cell.Elements.SAND)
 				Cell.Elements.GAS when !cell.visited:
-					updateGas(x, y)
+					updateGas(x, y, Cell.Elements.GAS)
 				Cell.Elements.WATER when !cell.visited:
-					updateWater(x, y)
+					updateLiquid(x, y, Cell.Elements.WATER)
 				_:
 					continue
 	
@@ -134,70 +131,63 @@ func simulate() -> void:
 		#for y in height:
 			#markCellVisited(x, y, false)
 
-func updateSand(x: int, y: int) -> void:
-	if y != height - 1:
-		var dx: int = x + (1 if randf() > .5 else -1)
-		
-		if getCell(x, y + 1).element == Cell.Elements.EMPTY:
-			setCell(x, y, Cell.Elements.EMPTY)
-			markOldCellVisited(x, y)
-			setCell(x, y + 1, Cell.Elements.SAND)
-			markPassShader = true
-		elif getCell(dx, y + 1).element == Cell.Elements.EMPTY:
-			setCell(x, y, Cell.Elements.EMPTY)
-			markOldCellVisited(x, y)
-			setCell(dx, y + 1, Cell.Elements.SAND)
-			markPassShader = true
+func updateSand(x: int, y: int, element: Cell.Elements) -> void:
+	var dx: int = x + (1 if randf() > .5 else -1)
+	var down: bool = (getOldCell(x, y + 1).element == Cell.Elements.EMPTY) && checkBounds(x, y + 1) && !getOldCell(x, y + 1).visited
+	var side: bool = (getOldCell(dx, y + 1).element == Cell.Elements.EMPTY) && checkBounds(dx, y + 1) && !getOldCell(dx, y + 1).visited
+	
+	if down:
+		setCell(x, y + 1, element)
+		markOldCellVisited(x, y + 1)
+	elif side:
+		setCell(dx, y + 1, element)
+		markOldCellVisited(dx, y + 1)
+	
+	if down || side:
+		setCell(x, y, Cell.Elements.EMPTY)
+		markPassShader = true
 
-func updateGas(x: int, y: int) -> void:
+func updateGas(x: int, y: int, element: Cell.Elements) -> void:
 	if !compareDensity(x, y, false):
 		var dx: int = x + (1 if randf() > .5 else -1)
 		var dy: int = y + (1 if randf() > .5 else -1)
+		var vert: bool = (getOldCell(x, dy).element == Cell.Elements.EMPTY) && checkBounds(x, dy) && !getOldCell(x, dy).visited
+		var side: bool = (getOldCell(dx, y).element == Cell.Elements.EMPTY) && checkBounds(dx, y) && !getOldCell(dx, y).visited
+		var diag: bool = side && (getOldCell(dx, dy).element == Cell.Elements.EMPTY) && checkBounds(dx, dy) && !getOldCell(dx, dy).visited
 		
-		if getCell(dx, dy).element == Cell.Elements.EMPTY:
+		if diag:
+			setCell(dx, dy, element)
+			markOldCellVisited(dx, dy)
+		elif vert:
+			setCell(x, dy, element)
+			markOldCellVisited(x, dy)
+		elif side:
+			setCell(dx, y, element)
+			markOldCellVisited(dx, y)
+		
+		if vert || side || diag:
 			setCell(x, y, Cell.Elements.EMPTY)
-			markOldCellVisited(x, y)
-			setCell(dx, dy, Cell.Elements.GAS)
 			markPassShader = true
 
 # https://stackoverflow.com/questions/66522958/water-in-a-falling-sand-simulation
-func updateWater(x: int, y: int) -> void:
+func updateLiquid(x: int, y: int, element: Cell.Elements) -> void:
 	if !compareDensity(x, y, false):
+		var dx: int = x + (1 if randf() > .5 else -1)
 		var down: bool = (getOldCell(x, y + 1).element == Cell.Elements.EMPTY) && checkBounds(x, y + 1) && !getOldCell(x, y + 1).visited
-		var dLeft: bool = (getOldCell(x - 1, y + 1).element == Cell.Elements.EMPTY) && checkBounds(x - 1, y + 1) && !getOldCell(x - 1, y + 1).visited
-		var dRight: bool = (getOldCell(x + 1, y + 1).element == Cell.Elements.EMPTY) && checkBounds(x + 1, y + 1) && !getOldCell(x + 1, y + 1).visited
-		var left: bool = (getOldCell(x - 1, y).element == Cell.Elements.EMPTY) && checkBounds(x - 1, y) && !getOldCell(x - 1, y).visited
-		var right: bool = (getOldCell(x + 1, y).element == Cell.Elements.EMPTY) && checkBounds(x + 1, y) && !getOldCell(x + 1, y).visited
-		
-		# Choose random direction if both left & right
-		if dLeft && dRight:
-			if randf() > .5:
-				dLeft = false
-			else:
-				dRight = false
-		if left && right:
-			if randf() > .5:
-				left = false
-			else:
-				right = false
+		var side: bool = (getOldCell(dx, y).element == Cell.Elements.EMPTY) && checkBounds(dx, y) && !getOldCell(dx, y).visited
+		var sided: bool = side && (getOldCell(dx, y + 1).element == Cell.Elements.EMPTY) && checkBounds(dx, y + 1) && !getOldCell(dx, y + 1).visited
 		
 		if down:
-			setCell(x, y + 1, Cell.Elements.WATER)
+			setCell(x, y + 1, element)
 			markOldCellVisited(x, y + 1)
-		elif dLeft:
-			setCell(x - 1, y + 1, Cell.Elements.WATER)
-			markOldCellVisited(x - 1, y + 1)
-		elif dRight:
-			setCell(x + 1, y + 1, Cell.Elements.WATER)
-			markOldCellVisited(x + 1, y + 1)
-		elif left:
-			setCell(x - 1, y, Cell.Elements.WATER)
-			markOldCellVisited(x - 1, y)
-		elif right:
-			setCell(x + 1, y, Cell.Elements.WATER)
-			markOldCellVisited(x + 1, y)
+		elif sided:
+			setCell(dx, y + 1, element)
+			markOldCellVisited(dx, y + 1)
+		elif side:
+			setCell(dx, y, element)
+			markOldCellVisited(dx, y)
 		
-		if down || dLeft || dRight || left || right:
+		if down || sided || side:
 			setCell(x, y, Cell.Elements.EMPTY)
 			markPassShader = true
 
