@@ -7,8 +7,8 @@ var height: int = 1
 var xIndicies: Array[int] = []
 var rowSums: Array[int] = [] # Keeps track of how many tiles are in each row
 
-var cells: Array[Array] = []
-var cellsOld: Array[Array] = []
+var cells: Array[Cell] = []
+var cellsOld: Array[Cell] = []
 var colorArray: PackedColorArray = PackedColorArray()
 
 func _init(width: int, height: int):
@@ -18,16 +18,17 @@ func _init(width: int, height: int):
 	initializeArrays()
 
 func initializeArrays() -> void:
+	cells.resize(width * height)
+	cellsOld.resize(width * height)
 	colorArray.resize(width * height)
 	for x in width:
-		cells.append([])
-		cellsOld.append([])
 		xIndicies.append(x)
 		for y in height:
-			var emptyCell: Cell = Cell.new()
-			colorArray[y * width + x] = emptyCell.getColor()
-			cells[x].append(emptyCell)
-			cellsOld[x].append(emptyCell)
+			var i := y * width + x
+			var cell := Cell.new()
+			cells[i] = cell
+			cellsOld[i] = cell
+			colorArray[i] = cell.getColor()
 	
 	xIndicies.shuffle()
 	rowSums.resize(height)
@@ -39,8 +40,9 @@ func simulate() -> bool:
 	for x in width:
 		for y in height:
 			markCellVisited(x, y, false)
-			cellsOld[x][y].element = cells[x][y].element
-			cellsOld[x][y].visited = cells[x][y].visited
+			var i := y * width + x
+			cellsOld[i].element = cells[i].element
+			cellsOld[i].visited = cells[i].visited
 	
 	for y in height:
 		y = height - 1 - y # Need for gravity to not be instant
@@ -89,7 +91,6 @@ func compareDensityAbove(x: int, y: int, _simulate: bool = false) -> int:
 			setCell(x, y - 1, cellType)
 			setCell(x, y, cellTypeUp)
 			markOldCellVisited(x, y - 1)
-			#markPassShader = true
 			return 2
 		return 1
 	return 0
@@ -100,7 +101,7 @@ func getOldCell(x: int, y: int) -> Cell:
 func getOldCellv(pos: Vector2i) -> Cell:
 	var x := clampi(pos.x, 0, width - 1)
 	var y := clampi(pos.y, 0, height - 1)
-	return cellsOld[x][y]
+	return cellsOld[y * width + x]
 
 func markOldCellVisited(x: int, y: int, visited: bool = true):
 	return markOldCellVisitedv(Vector2i(x, y), visited)
@@ -108,7 +109,7 @@ func markOldCellVisited(x: int, y: int, visited: bool = true):
 func markOldCellVisitedv(pos: Vector2i, visited: bool = true):
 	var x := clampi(pos.x, 0, width - 1)
 	var y := clampi(pos.y, 0, height - 1)
-	cellsOld[x][y].visited = visited
+	cellsOld[y * width + x].visited = visited
 
 func getCell(x: int, y: int) -> Cell:
 	return getCellv(Vector2i(x, y))
@@ -116,7 +117,7 @@ func getCell(x: int, y: int) -> Cell:
 func getCellv(pos: Vector2i) -> Cell:
 	var x := clampi(pos.x, 0, width - 1)
 	var y := clampi(pos.y, 0, height - 1)
-	return cells[x][y]
+	return cells[y * width + x]
 
 func markCellVisited(x: int, y: int, visited: bool = true):
 	return markCellVisitedv(Vector2i(x, y), visited)
@@ -124,7 +125,7 @@ func markCellVisited(x: int, y: int, visited: bool = true):
 func markCellVisitedv(pos: Vector2i, visited: bool = true):
 	var x := clampi(pos.x, 0, width - 1)
 	var y := clampi(pos.y, 0, height - 1)
-	cells[x][y].visited = visited
+	cells[y * width + x].visited = visited
 
 func setCell(x: int, y: int, element: Cell.Elements) -> void:
 	setCellv(Vector2i(x, y), element)
@@ -132,9 +133,8 @@ func setCell(x: int, y: int, element: Cell.Elements) -> void:
 func setCellv(pos: Vector2i, element: Cell.Elements) -> void:
 	var x := clampi(pos.x, 0, width - 1)
 	var y := clampi(pos.y, 0, height - 1)
-	cells[x][y].element = element
-	#calculateRowSum(y)
-	colorArray[y * width + x] = cells[x][y].getColor()
+	cells[y * width + x].element = element
+	colorArray[y * width + x] = cells[y * width + x].getColor()
 
 # Returns true if inside simulation bounds
 func checkBounds(x: int, y: int) -> bool:
