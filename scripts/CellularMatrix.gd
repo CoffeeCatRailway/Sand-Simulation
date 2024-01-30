@@ -33,6 +33,44 @@ func initializeArrays() -> void:
 	rowSums.resize(height)
 	rowSums.fill(0)
 
+func simulate() -> bool:
+	var updated := false
+	# Copy old cell states
+	for x in width:
+		for y in height:
+			markCellVisited(x, y, false)
+			cellsOld[x][y].element = cells[x][y].element
+			cellsOld[x][y].visited = cells[x][y].visited
+	
+	for y in height:
+		y = height - 1 - y # Need for gravity to not be instant
+		#if rowSums[y] == 0: # Skip empty rows (x axis) # || rowSums[y] == width
+			#continue
+		for x in xIndicies:
+			var cell: Cell = getOldCell(x, y)
+			match cell.element: # have update methods in Cell?
+				Cell.Elements.SAND when !cell.visited:
+					if Cell.updateSand(x, y, Cell.Elements.SAND, self):
+						updated = true # I wish we had |=
+				Cell.Elements.GAS when !cell.visited:
+					if Cell.updateGas(x, y, Cell.Elements.GAS, self):
+						updated = true
+				Cell.Elements.WATER when !cell.visited:
+					if Cell.updateLiquid(x, y, Cell.Elements.WATER, self):
+						updated = true
+				Cell.Elements.RAINBOW_DUST when !cell.visited:
+					if Cell.updateSand(x, y, Cell.Elements.RAINBOW_DUST, self):
+						updated = true
+				_:
+					continue
+	return updated
+
+func post() -> void:
+	xIndicies.shuffle()
+	#for y in height:
+		#calculateRowSum(y)
+	#print(rowSums[height-1])
+
 func calculateRowSum(y: int) -> void:
 	var sum: int = 0
 	for x in width:

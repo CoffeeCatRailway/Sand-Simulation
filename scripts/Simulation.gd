@@ -90,102 +90,13 @@ func vec2iDist(a: Vector2i, b: Vector2i) -> float:
 
 func _physics_process(delta) -> void:
 	handleMouse()
-	simulate()
+	if matrix.simulate():
+		markPassShader = true
 	
 	if markPassShader:
 		passToShader()
-		matrix.xIndicies.shuffle()
-		#for y in height:
-			#matrix.calculateRowSum(y)
-		#print(matrix.rowSums[height-1])
+		matrix.post()
 		markPassShader = false
-
-func simulate() -> void:
-	# Copy old cell states
-	for x in width:
-		for y in height:
-			matrix.markCellVisited(x, y, false)
-			matrix.cellsOld[x][y].element = matrix.cells[x][y].element
-			matrix.cellsOld[x][y].visited = matrix.cells[x][y].visited
-	
-	for y in height:
-		y = height - 1 - y # Need for gravity to not be instant
-		#if matrix.rowSums[y] == 0: # Skip empty rows (x axis)
-			#continue
-		for x in matrix.xIndicies:
-			var cell: Cell = matrix.getOldCell(x, y)
-			match cell.element: # have update methods in Cell?
-				Cell.Elements.SAND when !cell.visited:
-					updateSand(x, y, Cell.Elements.SAND)
-				Cell.Elements.GAS when !cell.visited:
-					updateGas(x, y, Cell.Elements.GAS)
-				Cell.Elements.WATER when !cell.visited:
-					updateLiquid(x, y, Cell.Elements.WATER)
-				Cell.Elements.RAINBOW_DUST when !cell.visited:
-					updateSand(x, y, Cell.Elements.RAINBOW_DUST)
-				_:
-					continue
-
-func updateSand(x: int, y: int, element: Cell.Elements) -> void:
-	var dx: int = x + (1 if randf() > .5 else -1)
-	var down: bool = (matrix.getOldCell(x, y + 1).element == Cell.Elements.EMPTY) && matrix.checkBounds(x, y + 1) && !matrix.getOldCell(x, y + 1).visited
-	var side: bool = (matrix.getOldCell(dx, y).element == Cell.Elements.EMPTY) && matrix.checkBounds(dx, y) && !matrix.getOldCell(dx, y).visited
-	var sided: bool = side && (matrix.getOldCell(dx, y + 1).element == Cell.Elements.EMPTY) && matrix.checkBounds(dx, y + 1) && !matrix.getOldCell(dx, y + 1).visited
-	
-	if down:
-		matrix.setCell(x, y + 1, element)
-		matrix.markOldCellVisited(x, y + 1)
-	elif sided:
-		matrix.setCell(dx, y + 1, element)
-		matrix.markOldCellVisited(dx, y + 1)
-	
-	if down || sided:
-		matrix.setCell(x, y, Cell.Elements.EMPTY)
-		markPassShader = true
-
-func updateGas(x: int, y: int, element: Cell.Elements) -> void:
-	if !matrix.compareDensityAbove(x, y, false):
-		var dx: int = x + (1 if randf() > .5 else -1)
-		var dy: int = y + (1 if randf() > .5 else -1)
-		var vert: bool = (matrix.getOldCell(x, dy).element == Cell.Elements.EMPTY) && matrix.checkBounds(x, dy) && !matrix.getOldCell(x, dy).visited
-		var side: bool = (matrix.getOldCell(dx, y).element == Cell.Elements.EMPTY) && matrix.checkBounds(dx, y) && !matrix.getOldCell(dx, y).visited
-		var diag: bool = side && (matrix.getOldCell(dx, dy).element == Cell.Elements.EMPTY) && matrix.checkBounds(dx, dy) && !matrix.getOldCell(dx, dy).visited
-		
-		if diag:
-			matrix.setCell(dx, dy, element)
-			matrix.markOldCellVisited(dx, dy)
-		elif vert:
-			matrix.setCell(x, dy, element)
-			matrix.markOldCellVisited(x, dy)
-		elif side:
-			matrix.setCell(dx, y, element)
-			matrix.markOldCellVisited(dx, y)
-		
-		if vert || side || diag:
-			matrix.setCell(x, y, Cell.Elements.EMPTY)
-			markPassShader = true
-
-# https://stackoverflow.com/questions/66522958/water-in-a-falling-sand-simulation
-func updateLiquid(x: int, y: int, element: Cell.Elements) -> void:
-	if !matrix.compareDensityAbove(x, y, false):
-		var dx: int = x + (1 if randf() > .5 else -1)
-		var down: bool = (matrix.getOldCell(x, y + 1).element == Cell.Elements.EMPTY) && matrix.checkBounds(x, y + 1) && !matrix.getOldCell(x, y + 1).visited
-		var side: bool = (matrix.getOldCell(dx, y).element == Cell.Elements.EMPTY) && matrix.checkBounds(dx, y) && !matrix.getOldCell(dx, y).visited
-		var sided: bool = side && (matrix.getOldCell(dx, y + 1).element == Cell.Elements.EMPTY) && matrix.checkBounds(dx, y + 1) && !matrix.getOldCell(dx, y + 1).visited
-		
-		if down:
-			matrix.setCell(x, y + 1, element)
-			matrix.markOldCellVisited(x, y + 1)
-		elif sided:
-			matrix.setCell(dx, y + 1, element)
-			matrix.markOldCellVisited(dx, y + 1)
-		elif side:
-			matrix.setCell(dx, y, element)
-			matrix.markOldCellVisited(dx, y)
-		
-		if down || sided || side:
-			matrix.setCell(x, y, Cell.Elements.EMPTY)
-			markPassShader = true
 
 func passToShader() -> void:
 	var image := Image.create(width, height, false, Image.FORMAT_RGB8)

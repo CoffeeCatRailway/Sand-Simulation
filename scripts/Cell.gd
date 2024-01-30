@@ -78,3 +78,72 @@ func isMovible() -> bool:
 			return false
 		_:
 			return true
+
+## Element update methods ##
+
+static func updateSand(x: int, y: int, element: Cell.Elements, matrix: CellularMatrix) -> bool:
+	var dx: int = x + (1 if randf() > .5 else -1)
+	var down: bool = (matrix.getOldCell(x, y + 1).element == Cell.Elements.EMPTY) && matrix.checkBounds(x, y + 1) && !matrix.getOldCell(x, y + 1).visited
+	var side: bool = (matrix.getOldCell(dx, y).element == Cell.Elements.EMPTY) && matrix.checkBounds(dx, y) && !matrix.getOldCell(dx, y).visited
+	var sided: bool = side && (matrix.getOldCell(dx, y + 1).element == Cell.Elements.EMPTY) && matrix.checkBounds(dx, y + 1) && !matrix.getOldCell(dx, y + 1).visited
+	
+	if down:
+		matrix.setCell(x, y + 1, element)
+		matrix.markOldCellVisited(x, y + 1)
+	elif sided:
+		matrix.setCell(dx, y + 1, element)
+		matrix.markOldCellVisited(dx, y + 1)
+	
+	if down || sided:
+		matrix.setCell(x, y, Cell.Elements.EMPTY)
+		#markPassShader = true
+		return true
+	return false
+
+static func updateGas(x: int, y: int, element: Cell.Elements, matrix: CellularMatrix) -> bool:
+	if !matrix.compareDensityAbove(x, y, false):
+		var dx: int = x + (1 if randf() > .5 else -1)
+		var dy: int = y + (1 if randf() > .5 else -1)
+		var vert: bool = (matrix.getOldCell(x, dy).element == Cell.Elements.EMPTY) && matrix.checkBounds(x, dy) && !matrix.getOldCell(x, dy).visited
+		var side: bool = (matrix.getOldCell(dx, y).element == Cell.Elements.EMPTY) && matrix.checkBounds(dx, y) && !matrix.getOldCell(dx, y).visited
+		var diag: bool = side && (matrix.getOldCell(dx, dy).element == Cell.Elements.EMPTY) && matrix.checkBounds(dx, dy) && !matrix.getOldCell(dx, dy).visited
+		
+		if diag:
+			matrix.setCell(dx, dy, element)
+			matrix.markOldCellVisited(dx, dy)
+		elif vert:
+			matrix.setCell(x, dy, element)
+			matrix.markOldCellVisited(x, dy)
+		elif side:
+			matrix.setCell(dx, y, element)
+			matrix.markOldCellVisited(dx, y)
+		
+		if vert || side || diag:
+			matrix.setCell(x, y, Cell.Elements.EMPTY)
+			#markPassShader = true
+			return true
+	return false
+
+# https://stackoverflow.com/questions/66522958/water-in-a-falling-sand-simulation
+static func updateLiquid(x: int, y: int, element: Cell.Elements, matrix: CellularMatrix) -> bool:
+	if !matrix.compareDensityAbove(x, y, false):
+		var dx: int = x + (1 if randf() > .5 else -1)
+		var down: bool = (matrix.getOldCell(x, y + 1).element == Cell.Elements.EMPTY) && matrix.checkBounds(x, y + 1) && !matrix.getOldCell(x, y + 1).visited
+		var side: bool = (matrix.getOldCell(dx, y).element == Cell.Elements.EMPTY) && matrix.checkBounds(dx, y) && !matrix.getOldCell(dx, y).visited
+		var sided: bool = side && (matrix.getOldCell(dx, y + 1).element == Cell.Elements.EMPTY) && matrix.checkBounds(dx, y + 1) && !matrix.getOldCell(dx, y + 1).visited
+		
+		if down:
+			matrix.setCell(x, y + 1, element)
+			matrix.markOldCellVisited(x, y + 1)
+		elif sided:
+			matrix.setCell(dx, y + 1, element)
+			matrix.markOldCellVisited(dx, y + 1)
+		elif side:
+			matrix.setCell(dx, y, element)
+			matrix.markOldCellVisited(dx, y)
+		
+		if down || sided || side:
+			matrix.setCell(x, y, Cell.Elements.EMPTY)
+			#markPassShader = true
+			return true
+	return false
