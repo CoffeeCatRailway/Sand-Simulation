@@ -3,28 +3,6 @@ extends Resource
 
 var element: Elements = Elements.EMPTY
 var visited: bool = false
-#var r: int = 0
-#var g: int = 0
-#var b: int = 0
-
-#func _init(cell: Cell = null, element: Elements = Elements.EMPTY, customColor: Color = Color(0, 0, 0, 1)):
-	#if cell == null:
-		#self.element = element
-		#if !customColor:
-			#var color = getColor()
-			#self.r = color.r8
-			#self.g = color.g8
-			#self.b = color.b8
-		#else:
-			#self.r = customColor.r8
-			#self.g = customColor.g8
-			#self.b = customColor.b8
-	#else:
-		#self.element = cell.element
-		#self.visited = cell.visited
-		#self.r = cell.r
-		#self.g = cell.g
-		#self.b = cell.b
 
 enum Elements
 {
