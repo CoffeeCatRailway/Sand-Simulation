@@ -72,6 +72,8 @@ func getDensity() -> int: #0-100  0 being nothing
 
 func isMovible() -> bool:
 	match element:
+		Elements.EMPTY:
+			return false
 		Elements.STONE:
 			return false
 		_:

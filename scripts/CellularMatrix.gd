@@ -37,7 +37,9 @@ func calculateRowSum(y: int) -> void:
 	var sum: int = 0
 	for x in width:
 		if getCell(x, y).isMovible():
-			sum += getCell(x, y).element
+			#sum += getCell(x, y).element
+			sum += 1
+			sum << 1
 	rowSums[y] = sum
 
 # if simulate is true cells won't be swapped
