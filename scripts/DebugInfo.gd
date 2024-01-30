@@ -28,7 +28,7 @@ func _process(delta) -> void:
 	#var visitedCells := 0
 	for x in sim.width:
 		for y in sim.height:
-			var cell := sim.getCell(x, y)
+			var cell := sim.matrix.getCell(x, y)
 			if cell.element != Cell.Elements.EMPTY:
 				cells += 1
 				#if cell.visited:

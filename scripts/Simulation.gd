@@ -11,10 +11,11 @@ var selectedElement := Cell.Elements.SAND
 var width: int = 1
 var height: int = 1
 
-var cells: Array[Array] = []
-var cellsOld: Array[Array] = []
-var xIndicies: Array[int] = []
-var colorArray: PackedColorArray = PackedColorArray()
+var matrix: CellularMatrix
+#var cells: Array[Array] = []
+#var cellsOld: Array[Array] = []
+#var xIndicies: Array[int] = []
+#var colorArray: PackedColorArray = PackedColorArray()
 
 var markPassShader := false
 
@@ -27,20 +28,21 @@ func _ready() -> void:
 	# Pass width/height to sahder
 	colorRect.material.set_shader_parameter("size", Vector2(width, height))
 	
+	matrix = CellularMatrix.new(width, height)
 	# Fill array(s)
-	colorArray.resize(width * height)
-	for x in width:
-		cells.append([])
-		cellsOld.append([])
-		xIndicies.append(x)
-		for y in height:
-			var emptyCell: Cell = Cell.new()
-			colorArray[y * width + x] = emptyCell.getColor()
-			cells[x].append(emptyCell)
-			cellsOld[x].append(emptyCell)
-			#if x == 0 || y == 0 || x == width - 1 || y == height - 1:
-				#setCell(x, y, 4)
-	xIndicies.shuffle()
+	#colorArray.resize(width * height)
+	#for x in width:
+		#cells.append([])
+		#cellsOld.append([])
+		#xIndicies.append(x)
+		#for y in height:
+			#var emptyCell: Cell = Cell.new()
+			#colorArray[y * width + x] = emptyCell.getColor()
+			#cells[x].append(emptyCell)
+			#cellsOld[x].append(emptyCell)
+			##if x == 0 || y == 0 || x == width - 1 || y == height - 1:
+				##setCell(x, y, 4)
+	#xIndicies.shuffle()
 	
 	# Initialze screen
 	passToShader()
@@ -92,12 +94,17 @@ func handleMouse() -> void:
 				pos.y = mousePos.y + y
 				if vec2iDist(mousePos, pos) <= brushRadius || squareBrush:
 					if isRemoveing:
-						setCellv(pos, Cell.Elements.EMPTY)
-						markCellVisitedv(pos)
+						#setCellv(pos, Cell.Elements.EMPTY)
+						#markCellVisitedv(pos)
+						matrix.setCellv(pos, Cell.Elements.EMPTY)
+						matrix.markCellVisitedv(pos)
 					if isAdding:
-						if getCellv(pos).element == Cell.Elements.EMPTY:
-							setCellv(pos, selectedElement)
-							markCellVisitedv(pos)
+						#if getCellv(pos).element == Cell.Elements.EMPTY:
+							#setCellv(pos, selectedElement)
+							#markCellVisitedv(pos)
+						if matrix.getCellv(pos).element == Cell.Elements.EMPTY:
+							matrix.setCellv(pos, selectedElement)
+							matrix.markCellVisitedv(pos)
 		markPassShader = true
 
 func _physics_process(delta) -> void:
@@ -106,22 +113,29 @@ func _physics_process(delta) -> void:
 	
 	if markPassShader:
 		passToShader()
-		xIndicies.shuffle()
+		matrix.xIndicies.shuffle()
+		#for y in height:
+			#matrix.calculateRowSum(y)
 		markPassShader = false
 
 func simulate() -> void:
 	# Copy old cell states
 	for x in width:
 		for y in height:
-			markCellVisited(x, y, false)
-			cellsOld[x][y].element = cells[x][y].element
-			cellsOld[x][y].visited = cells[x][y].visited
-	
+			#markCellVisited(x, y, false)
+			#cellsOld[x][y].element = cells[x][y].element
+			#cellsOld[x][y].visited = cells[x][y].visited
+			matrix.markCellVisited(x, y, false)
+			matrix.cellsOld[x][y].element = matrix.getCell(x, y).element
+			matrix.cellsOld[x][y].visited = matrix.getCell(x, y).visited
+	var b = false
 	for y in height:
 		y = height - 1 - y # Need for gravity to not be instant
-		for x in xIndicies:
-			var cell: Cell = getOldCell(x, y)
-			match cell.element:
+		#if matrix.rowSums[y] == 0: # Skip empty rows (x axis)
+			#continue
+		for x in matrix.xIndicies:
+			var cell: Cell = matrix.getOldCell(x, y)
+			match cell.element: # have update methods in Cell?
 				Cell.Elements.SAND when !cell.visited:
 					updateSand(x, y, Cell.Elements.SAND)
 				Cell.Elements.GAS when !cell.visited:
@@ -139,86 +153,86 @@ func simulate() -> void:
 
 func updateSand(x: int, y: int, element: Cell.Elements) -> void:
 	var dx: int = x + (1 if randf() > .5 else -1)
-	var down: bool = (getOldCell(x, y + 1).element == Cell.Elements.EMPTY) && checkBounds(x, y + 1) && !getOldCell(x, y + 1).visited
-	var side: bool = (getOldCell(dx, y).element == Cell.Elements.EMPTY) && checkBounds(dx, y) && !getOldCell(dx, y).visited
-	var sided: bool = side && (getOldCell(dx, y + 1).element == Cell.Elements.EMPTY) && checkBounds(dx, y + 1) && !getOldCell(dx, y + 1).visited
+	var down: bool = (matrix.getOldCell(x, y + 1).element == Cell.Elements.EMPTY) && matrix.checkBounds(x, y + 1) && !matrix.getOldCell(x, y + 1).visited
+	var side: bool = (matrix.getOldCell(dx, y).element == Cell.Elements.EMPTY) && matrix.checkBounds(dx, y) && !matrix.getOldCell(dx, y).visited
+	var sided: bool = side && (matrix.getOldCell(dx, y + 1).element == Cell.Elements.EMPTY) && matrix.checkBounds(dx, y + 1) && !matrix.getOldCell(dx, y + 1).visited
 	
 	if down:
-		setCell(x, y + 1, element)
-		markOldCellVisited(x, y + 1)
+		matrix.setCell(x, y + 1, element)
+		matrix.markOldCellVisited(x, y + 1)
 	elif sided:
-		setCell(dx, y + 1, element)
-		markOldCellVisited(dx, y + 1)
+		matrix.setCell(dx, y + 1, element)
+		matrix.markOldCellVisited(dx, y + 1)
 	
 	if down || sided:
-		setCell(x, y, Cell.Elements.EMPTY)
+		matrix.setCell(x, y, Cell.Elements.EMPTY)
 		markPassShader = true
 
 func updateGas(x: int, y: int, element: Cell.Elements) -> void:
-	if !compareDensity(x, y, false):
+	if !matrix.compareDensityAbove(x, y, false):
 		var dx: int = x + (1 if randf() > .5 else -1)
 		var dy: int = y + (1 if randf() > .5 else -1)
-		var vert: bool = (getOldCell(x, dy).element == Cell.Elements.EMPTY) && checkBounds(x, dy) && !getOldCell(x, dy).visited
-		var side: bool = (getOldCell(dx, y).element == Cell.Elements.EMPTY) && checkBounds(dx, y) && !getOldCell(dx, y).visited
-		var diag: bool = side && (getOldCell(dx, dy).element == Cell.Elements.EMPTY) && checkBounds(dx, dy) && !getOldCell(dx, dy).visited
+		var vert: bool = (matrix.getOldCell(x, dy).element == Cell.Elements.EMPTY) && matrix.checkBounds(x, dy) && !matrix.getOldCell(x, dy).visited
+		var side: bool = (matrix.getOldCell(dx, y).element == Cell.Elements.EMPTY) && matrix.checkBounds(dx, y) && !matrix.getOldCell(dx, y).visited
+		var diag: bool = side && (matrix.getOldCell(dx, dy).element == Cell.Elements.EMPTY) && matrix.checkBounds(dx, dy) && !matrix.getOldCell(dx, dy).visited
 		
 		if diag:
-			setCell(dx, dy, element)
-			markOldCellVisited(dx, dy)
+			matrix.setCell(dx, dy, element)
+			matrix.markOldCellVisited(dx, dy)
 		elif vert:
-			setCell(x, dy, element)
-			markOldCellVisited(x, dy)
+			matrix.setCell(x, dy, element)
+			matrix.markOldCellVisited(x, dy)
 		elif side:
-			setCell(dx, y, element)
-			markOldCellVisited(dx, y)
+			matrix.setCell(dx, y, element)
+			matrix.markOldCellVisited(dx, y)
 		
 		if vert || side || diag:
-			setCell(x, y, Cell.Elements.EMPTY)
+			matrix.setCell(x, y, Cell.Elements.EMPTY)
 			markPassShader = true
 
 # https://stackoverflow.com/questions/66522958/water-in-a-falling-sand-simulation
 func updateLiquid(x: int, y: int, element: Cell.Elements) -> void:
-	if !compareDensity(x, y, false):
+	if !matrix.compareDensityAbove(x, y, false):
 		var dx: int = x + (1 if randf() > .5 else -1)
-		var down: bool = (getOldCell(x, y + 1).element == Cell.Elements.EMPTY) && checkBounds(x, y + 1) && !getOldCell(x, y + 1).visited
-		var side: bool = (getOldCell(dx, y).element == Cell.Elements.EMPTY) && checkBounds(dx, y) && !getOldCell(dx, y).visited
-		var sided: bool = side && (getOldCell(dx, y + 1).element == Cell.Elements.EMPTY) && checkBounds(dx, y + 1) && !getOldCell(dx, y + 1).visited
+		var down: bool = (matrix.getOldCell(x, y + 1).element == Cell.Elements.EMPTY) && matrix.checkBounds(x, y + 1) && !matrix.getOldCell(x, y + 1).visited
+		var side: bool = (matrix.getOldCell(dx, y).element == Cell.Elements.EMPTY) && matrix.checkBounds(dx, y) && !matrix.getOldCell(dx, y).visited
+		var sided: bool = side && (matrix.getOldCell(dx, y + 1).element == Cell.Elements.EMPTY) && matrix.checkBounds(dx, y + 1) && !matrix.getOldCell(dx, y + 1).visited
 		
 		if down:
-			setCell(x, y + 1, element)
-			markOldCellVisited(x, y + 1)
+			matrix.setCell(x, y + 1, element)
+			matrix.markOldCellVisited(x, y + 1)
 		elif sided:
-			setCell(dx, y + 1, element)
-			markOldCellVisited(dx, y + 1)
+			matrix.setCell(dx, y + 1, element)
+			matrix.markOldCellVisited(dx, y + 1)
 		elif side:
-			setCell(dx, y, element)
-			markOldCellVisited(dx, y)
+			matrix.setCell(dx, y, element)
+			matrix.markOldCellVisited(dx, y)
 		
 		if down || sided || side:
-			setCell(x, y, Cell.Elements.EMPTY)
+			matrix.setCell(x, y, Cell.Elements.EMPTY)
 			markPassShader = true
 
 # if simulate is true cells won't be swapped
-func compareDensity(x: int, y: int, _simulate: bool) -> bool:
-	var cellTypeUp := getCell(x, y - 1).element
-	var cellType := getCell(x, y).element
-	if getCell(x, y - 1).isMovible() && getCell(x, y).getDensity() < getCell(x, y - 1).getDensity():
-		if !_simulate:
-			setCell(x, y - 1, cellType)
-			setCell(x, y, cellTypeUp)
-			markOldCellVisited(x, y - 1)
-			markPassShader = true
-		return true
-	return false
+#func compareDensity(x: int, y: int, _simulate: bool) -> bool:
+	#var cellTypeUp := getCell(x, y - 1).element
+	#var cellType := getCell(x, y).element
+	#if getCell(x, y - 1).isMovible() && getCell(x, y).getDensity() < getCell(x, y - 1).getDensity():
+		#if !_simulate:
+			#setCell(x, y - 1, cellType)
+			#setCell(x, y, cellTypeUp)
+			#markOldCellVisited(x, y - 1)
+			#markPassShader = true
+		#return true
+	#return false
 
 func passToShader() -> void:
 	var image := Image.create(width, height, false, Image.FORMAT_RGB8)
 	image.fill(Color.BLACK)
 	for x in width:
 		for y in height:
-			var cell: Cell = getCell(x, y)
+			var cell: Cell = matrix.getCell(x, y)
 			if cell.element != Cell.Elements.EMPTY:
-				image.set_pixel(x, y, colorArray[y * width + x])
+				image.set_pixel(x, y, matrix.colorArray[y * width + x])
 				#image.set_pixel(x, y, cell.getColor())
 	
 	var texture = ImageTexture.create_from_image(image)
@@ -226,50 +240,50 @@ func passToShader() -> void:
 
 ## Util methods ##
 
-func getOldCell(x: int, y: int) -> Cell:
-	return getOldCellv(Vector2i(x, y))
-
-func getOldCellv(pos: Vector2i) -> Cell:
-	var x := clampi(pos.x, 0, width - 1)
-	var y := clampi(pos.y, 0, height - 1)
-	return cellsOld[x][y]
-
-func markOldCellVisited(x: int, y: int, visited: bool = true):
-	return markOldCellVisitedv(Vector2i(x, y), visited)
-
-func markOldCellVisitedv(pos: Vector2i, visited: bool = true):
-	var x := clampi(pos.x, 0, width - 1)
-	var y := clampi(pos.y, 0, height - 1)
-	cellsOld[x][y].visited = visited
-
-func getCell(x: int, y: int) -> Cell:
-	return getCellv(Vector2i(x, y))
-
-func getCellv(pos: Vector2i) -> Cell:
-	var x := clampi(pos.x, 0, width - 1)
-	var y := clampi(pos.y, 0, height - 1)
-	return cells[x][y]
-
-func markCellVisited(x: int, y: int, visited: bool = true):
-	return markCellVisitedv(Vector2i(x, y), visited)
-
-func markCellVisitedv(pos: Vector2i, visited: bool = true):
-	var x := clampi(pos.x, 0, width - 1)
-	var y := clampi(pos.y, 0, height - 1)
-	cells[x][y].visited = visited
-
-func setCell(x: int, y: int, element: Cell.Elements) -> void:
-	setCellv(Vector2i(x, y), element)
-
-func setCellv(pos: Vector2i, element: Cell.Elements) -> void:
-	var x := clampi(pos.x, 0, width - 1)
-	var y := clampi(pos.y, 0, height - 1)
-	cells[x][y].element = element
-	colorArray[y * width + x] = cells[x][y].getColor()
+#func getOldCell(x: int, y: int) -> Cell:
+	#return getOldCellv(Vector2i(x, y))
+#
+#func getOldCellv(pos: Vector2i) -> Cell:
+	#var x := clampi(pos.x, 0, width - 1)
+	#var y := clampi(pos.y, 0, height - 1)
+	#return cellsOld[x][y]
+#
+#func markOldCellVisited(x: int, y: int, visited: bool = true):
+	#return markOldCellVisitedv(Vector2i(x, y), visited)
+#
+#func markOldCellVisitedv(pos: Vector2i, visited: bool = true):
+	#var x := clampi(pos.x, 0, width - 1)
+	#var y := clampi(pos.y, 0, height - 1)
+	#cellsOld[x][y].visited = visited
+#
+#func getCell(x: int, y: int) -> Cell:
+	#return getCellv(Vector2i(x, y))
+#
+#func getCellv(pos: Vector2i) -> Cell:
+	#var x := clampi(pos.x, 0, width - 1)
+	#var y := clampi(pos.y, 0, height - 1)
+	#return cells[x][y]
+#
+#func markCellVisited(x: int, y: int, visited: bool = true):
+	#return markCellVisitedv(Vector2i(x, y), visited)
+#
+#func markCellVisitedv(pos: Vector2i, visited: bool = true):
+	#var x := clampi(pos.x, 0, width - 1)
+	#var y := clampi(pos.y, 0, height - 1)
+	#cells[x][y].visited = visited
+#
+#func setCell(x: int, y: int, element: Cell.Elements) -> void:
+	#setCellv(Vector2i(x, y), element)
+#
+#func setCellv(pos: Vector2i, element: Cell.Elements) -> void:
+	#var x := clampi(pos.x, 0, width - 1)
+	#var y := clampi(pos.y, 0, height - 1)
+	#cells[x][y].element = element
+	#colorArray[y * width + x] = cells[x][y].getColor()
 
 func vec2iDist(a: Vector2i, b: Vector2i) -> float:
 	return sqrt(pow(a.x - b.x, 2.) + pow(a.y - b.y, 2.))
 
 # Returns true if inside simulation bounds
-func checkBounds(x: int, y: int) -> bool:
-	return x >= 0 && x < width && y >= 0 && y < height
+#func checkBounds(x: int, y: int) -> bool:
+	#return x >= 0 && x < width && y >= 0 && y < height
