@@ -5,7 +5,7 @@ var width: int = 1
 var height: int = 1
 
 var xIndicies: Array[int] = []
-var rowSums: Array[int] = [] # Keeps track of how many tiles are in each row
+var idleRowSums: Array[int] = [] # Keeps track of how many tiles are in each row
 
 var cells: Array[Cell] = []
 var cellsOld: Array[Cell] = []
@@ -31,8 +31,8 @@ func initializeArrays() -> void:
 			colorArray[i] = cell.getColor()
 	
 	xIndicies.shuffle()
-	rowSums.resize(height)
-	rowSums.fill(0)
+	idleRowSums.resize(height)
+	idleRowSums.fill(0)
 
 func simulate() -> bool:
 	var updated := false
@@ -46,8 +46,8 @@ func simulate() -> bool:
 	
 	for y in height:
 		y = height - 1 - y # Need for gravity to not be instant
-		#if rowSums[y] == 0: # Skip empty rows (x axis) # || rowSums[y] == width
-			#continue
+		if idleRowSums[y] == 0: # Skip empty rows (x axis)
+			continue
 		for x in xIndicies:
 			var cell: Cell = getOldCell(x, y)
 			match cell.element: # have update methods in Cell?
@@ -69,18 +69,29 @@ func simulate() -> bool:
 
 func post() -> void:
 	xIndicies.shuffle()
-	#for y in height:
-		#calculateRowSum(y)
-	#print(rowSums[height-1])
+	#print(dec2bin(idleRowSums[height-1], width - 1))
 
-func calculateRowSum(y: int) -> void:
-	var sum: int = 0
-	for x in width:
-		if getCell(x, y).isMovible():
-			#sum += getCell(x, y).element
-			sum += 1
-			sum << 1
-	rowSums[y] = sum
+## https://godotforums.org/d/18970-how-can-i-work-with-binary-numbers
+func dec2bin(dec, len: int = 31) -> String: # Checking up to 32 bits 
+	var bin = "" 
+	var temp
+	
+	while(len >= 0):
+		temp = dec >> len 
+		if(temp & 1):
+			bin += "1"
+		else:
+			bin += "0"
+		len -= 1
+	
+	return bin
+
+## https://www.reddit.com/r/godot/comments/10lvy18/comment/j5zdo60/?utm_source=share&utm_medium=web2x&context=3
+func enableBit(mask: int, i: int) -> int:
+	return mask | (1 << i)
+
+func disableBit(mask: int, i: int) -> int:
+	return mask & ~(1 << i)
 
 # if simulate is true cells won't be swapped
 func compareDensityAbove(x: int, y: int, _simulate: bool = false) -> int:
@@ -135,6 +146,12 @@ func setCellv(pos: Vector2i, element: Cell.Elements) -> void:
 	var y := clampi(pos.y, 0, height - 1)
 	cells[y * width + x].element = element
 	colorArray[y * width + x] = cells[y * width + x].getColor()
+	
+	if cells[y * width + x].isMovible():
+		if element == Cell.Elements.EMPTY:
+			idleRowSums[y] = disableBit(idleRowSums[y], x)
+		else:
+			idleRowSums[y] = enableBit(idleRowSums[y], x)
 
 # Returns true if inside simulation bounds
 func checkBounds(x: int, y: int) -> bool:
