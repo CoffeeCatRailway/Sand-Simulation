@@ -45,12 +45,12 @@ func simulate() -> bool:
 			cellsOld[i].visited = cells[i].visited
 	
 	for y in height:
-		y = height - 1 - y # Need for gravity to not be instant
+		y = height - 1 - y # Needed for gravity to not be instant
 		if idleRowSums[y] == 0: # Skip empty rows (x axis)
 			continue
 		for x in xIndicies:
 			var cell: Cell = getOldCell(x, y)
-			match cell.element: # have update methods in Cell?
+			match cell.element:
 				Cell.Elements.SAND when !cell.visited:
 					if Cell.updateSand(x, y, Cell.Elements.SAND, self):
 						updated = true # I wish we had |=
