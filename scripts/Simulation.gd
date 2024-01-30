@@ -10,9 +10,7 @@ var selectedElement := Cell.Elements.SAND
 
 var width: int = 1
 var height: int = 1
-
 var matrix: CellularMatrix
-
 var markPassShader := false
 
 func _ready() -> void:
@@ -38,16 +36,11 @@ func _input(event) -> void:
 		if event.is_action_released("brush_shape"):
 			squareBrush = !squareBrush
 		
-		if event.is_action_pressed("num1"):
-			selectedElement = Cell.Elements.SAND
-		if event.is_action_pressed("num2"):
-			selectedElement = Cell.Elements.GAS
-		if event.is_action_pressed("num3"):
-			selectedElement = Cell.Elements.WATER
-		if event.is_action_pressed("num4"):
-			selectedElement = Cell.Elements.STONE
-		if event.is_action_pressed("num5"):
-			selectedElement = Cell.Elements.RAINBOW_DUST
+		for i in Cell.Elements.size():
+			if i == 0: # Ignore empty
+				continue
+			if event.is_action_pressed("num%s" % i):
+				selectedElement = Cell.Elements.values()[i]
 	
 	if event is InputEventMouseMotion:
 		if event.velocity != Vector2.ZERO:
