@@ -79,7 +79,7 @@ static func updateSand(x: int, y: int, element: Cell.Elements, matrix: CellularM
 	return false
 
 static func updateGas(x: int, y: int, element: Cell.Elements, matrix: CellularMatrix) -> bool:
-	if !matrix.compareDensityAbove(x, y, false):
+	if !matrix.compareDensityAbove(x, y):
 		var dx: int = x + (1 if randf() > .5 else -1)
 		var dy: int = y + (1 if randf() > .5 else -1)
 		var vert: bool = (matrix.getOldCell(x, dy).element == Cell.Elements.EMPTY) && matrix.checkBounds(x, dy) && !matrix.getOldCell(x, dy).visited
@@ -104,7 +104,7 @@ static func updateGas(x: int, y: int, element: Cell.Elements, matrix: CellularMa
 
 # https://stackoverflow.com/questions/66522958/water-in-a-falling-sand-simulation
 static func updateLiquid(x: int, y: int, element: Cell.Elements, matrix: CellularMatrix) -> bool:
-	if !matrix.compareDensityAbove(x, y, false):
+	if !matrix.compareDensityAbove(x, y):
 		var dx: int = x + (1 if randf() > .5 else -1)
 		var down: bool = (matrix.getOldCell(x, y + 1).element == Cell.Elements.EMPTY) && matrix.checkBounds(x, y + 1) && !matrix.getOldCell(x, y + 1).visited
 		var side: bool = (matrix.getOldCell(dx, y).element == Cell.Elements.EMPTY) && matrix.checkBounds(dx, y) && !matrix.getOldCell(dx, y).visited

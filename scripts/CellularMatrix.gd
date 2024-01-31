@@ -69,21 +69,17 @@ func simulate() -> bool:
 
 func post() -> void:
 	xIndicies.shuffle()
-	#print(dec2bin(idleRowSums[height-1], width - 1))
+	print("Y (%s) idle row sum: %s" % [(height - 1), dec2bin(idleRowSums[height-1], width - 1)])
 
 ## https://godotforums.org/d/18970-how-can-i-work-with-binary-numbers
-func dec2bin(dec, len: int = 31) -> String: # Checking up to 32 bits 
-	var bin = "" 
-	var temp
-	
+func dec2bin(dec, len: int = 31) -> String: # Checking up to 32 bits by default
+	var bin = ""
 	while(len >= 0):
-		temp = dec >> len 
-		if(temp & 1):
+		if(dec >> len & 1):
 			bin += "1"
 		else:
 			bin += "0"
 		len -= 1
-	
 	return bin
 
 ## https://www.reddit.com/r/godot/comments/10lvy18/comment/j5zdo60/?utm_source=share&utm_medium=web2x&context=3
@@ -95,9 +91,11 @@ func disableBit(mask: int, i: int) -> int:
 
 # if simulate is true cells won't be swapped
 func compareDensityAbove(x: int, y: int, _simulate: bool = false) -> int:
-	var cellTypeUp := getCell(x, y - 1).element
-	var cellType := getCell(x, y).element
-	if getCell(x, y - 1).isMovible() && getCell(x, y).getDensity() < getCell(x, y - 1).getDensity():
+	var cellUp := getCell(x, y - 1)
+	var cell := getCell(x, y)
+	var cellTypeUp := cellUp.element
+	var cellType := cell.element
+	if cellUp.isMovible() && cell.getDensity() < cellUp.getDensity():
 		if !_simulate:
 			setCell(x, y - 1, cellType)
 			setCell(x, y, cellTypeUp)

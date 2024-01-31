@@ -8,8 +8,8 @@ extends Node2D
 @export var squareBrush: bool = false
 var selectedElement := Cell.Elements.SAND
 
-var width: int = 1
-var height: int = 1
+var width: int = 64 # (1152/10)/6 # 6 vertical threads, 19
+var height: int = 36 # (648/10) # 64
 var matrix: CellularMatrix
 var markPassShader := false
 
@@ -44,8 +44,8 @@ func _input(event) -> void:
 	
 	if event is InputEventMouseMotion:
 		if event.velocity != Vector2.ZERO:
-			#mousePos = Vector2i(event.position / Vector2(get_viewport().size) * Vector2(width, height))
-			mousePos = Vector2i(event.position) / cellSize # Works when Project/Settings/Display/Window/Stretch/Mode is 'viewport'
+			mousePos = Vector2i(event.position / Vector2(get_viewport().size) * Vector2(width, height))
+			#mousePos = Vector2i(event.position) / cellSize # Works when Project/Settings/Display/Window/Stretch/Mode is 'viewport'
 	
 	if event is InputEventMouseButton:
 		if event.button_index == MOUSE_BUTTON_WHEEL_UP && event.pressed:
