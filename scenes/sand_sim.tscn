@@ -1,8 +1,9 @@
-[gd_scene load_steps=5 format=3 uid="uid://of4jtmorwma1"]
+[gd_scene load_steps=6 format=3 uid="uid://of4jtmorwma1"]
 
 [ext_resource type="Script" path="res://scripts/Simulation.gd" id="1_vlsb0"]
 [ext_resource type="Shader" path="res://shaders/sand_sim.gdshader" id="3_gdxei"]
 [ext_resource type="Script" path="res://scripts/DebugInfo.gd" id="3_o7an3"]
+[ext_resource type="Script" path="res://scripts/QuadTreeVisual.gd" id="3_yvirg"]
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_w8h2r"]
 shader = ExtResource("3_gdxei")
@@ -35,3 +36,7 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
+
+[node name="Node2D" type="Node2D" parent="CanvasLayer" node_paths=PackedStringArray("sim")]
+script = ExtResource("3_yvirg")
+sim = NodePath("../..")

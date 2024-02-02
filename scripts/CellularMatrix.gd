@@ -11,9 +11,13 @@ var cells: Array[Cell] = []
 var cellsOld: Array[Cell] = []
 var colorArray: PackedColorArray = PackedColorArray()
 
+var quadTree: QuadTree
+
 func _init(width: int, height: int):
 	self.width = width
 	self.height = height
+	
+	quadTree = QuadTree.new(Rect2i(0, 0, width, height), 32)
 	
 	initializeArrays()
 
@@ -34,42 +38,102 @@ func initializeArrays() -> void:
 	idleRowSums.resize(height)
 	idleRowSums.fill(0)
 
-func simulate() -> bool:
-	var updated := false
-	# Copy old cell states
-	for x in width:
-		for y in height:
-			markCellVisited(x, y, false)
-			var i := y * width + x
-			cellsOld[i].element = cells[i].element
-			cellsOld[i].visited = cells[i].visited
-	
+func populateQuadTree() -> void:
+	quadTree.clear()
 	for y in height:
-		y = height - 1 - y # Needed for gravity to not be instant
 		if idleRowSums[y] == 0: # Skip empty rows (x axis)
 			continue
-		for x in xIndicies:
-			var cell: Cell = getOldCell(x, y)
+		for x in width:
+			var cell := getOldCell(x, y)
+			if cell.isMovible():
+				quadTree.insert(Vector2i(x, y))
+
+func copyOldStates(quad: QuadTree) -> void:
+	for p in quad.points:
+		markCellVisitedv(p, false)
+		var i := p.y * width + p.x
+		cellsOld[i].element = cells[i].element
+		cellsOld[i].visited = cells[i].visited
+	
+	if !quad.northWest:
+		return
+	
+	copyOldStates(quad.northWest)
+	copyOldStates(quad.northEast)
+	copyOldStates(quad.southWest)
+	copyOldStates(quad.southEast)
+
+func updateCells(quad: QuadTree) -> bool:
+	var updated := false
+	if quad.points.size() != 0:# && quad.points.size() != quad.capacity:
+		for p in quad.points:
+			var cell := getOldCellv(p)
 			match cell.element:
 				Cell.Elements.SAND when !cell.visited:
-					if Cell.updateSand(x, y, Cell.Elements.SAND, self):
+					if Cell.updateSand(p.x, p.y, Cell.Elements.SAND, self):
 						updated = true # I wish we had |=
 				Cell.Elements.GAS when !cell.visited:
-					if Cell.updateGas(x, y, Cell.Elements.GAS, self):
+					if Cell.updateGas(p.x, p.y, Cell.Elements.GAS, self):
 						updated = true
 				Cell.Elements.WATER when !cell.visited:
-					if Cell.updateLiquid(x, y, Cell.Elements.WATER, self):
+					if Cell.updateLiquid(p.x, p.y, Cell.Elements.WATER, self):
 						updated = true
 				Cell.Elements.RAINBOW_DUST when !cell.visited:
-					if Cell.updateSand(x, y, Cell.Elements.RAINBOW_DUST, self):
+					if Cell.updateSand(p.x, p.y, Cell.Elements.RAINBOW_DUST, self):
 						updated = true
 				_:
 					continue
+	
+	if !quad.northWest:
+		return updated
+	
+	if updateCells(quad.northWest): updated = true
+	if updateCells(quad.northEast): updated = true
+	if updateCells(quad.southWest): updated = true
+	if updateCells(quad.southEast): updated = true
+	
 	return updated
 
+func simulate() -> bool:
+	##Copy old cell states
+	#for y in height:
+		#for x in width:
+			#markCellVisited(x, y, false)
+			#var i := y * width + x
+			#cellsOld[i].element = cells[i].element
+			#cellsOld[i].visited = cells[i].visited
+	#
+	#var updated := false
+	#for y in height:
+		#y = height - 1 - y # Needed for gravity to not be instant
+		#if idleRowSums[y] == 0: # Skip empty rows (x axis)
+			#continue
+		#for x in xIndicies:
+			#var cell: Cell = getOldCell(x, y)
+			#match cell.element:
+				#Cell.Elements.SAND when !cell.visited:
+					#if Cell.updateSand(x, y, Cell.Elements.SAND, self):
+						#updated = true # I wish we had |=
+				#Cell.Elements.GAS when !cell.visited:
+					#if Cell.updateGas(x, y, Cell.Elements.GAS, self):
+						#updated = true
+				#Cell.Elements.WATER when !cell.visited:
+					#if Cell.updateLiquid(x, y, Cell.Elements.WATER, self):
+						#updated = true
+				#Cell.Elements.RAINBOW_DUST when !cell.visited:
+					#if Cell.updateSand(x, y, Cell.Elements.RAINBOW_DUST, self):
+						#updated = true
+				#_:
+					#continue
+	#return updated
+	
+	copyOldStates(quadTree)
+	return updateCells(quadTree)
+
 func post() -> void:
-	xIndicies.shuffle()
-	print("Y (%s) idle row sum: %s" % [(height - 1), dec2bin(idleRowSums[height-1], width - 1)])
+	populateQuadTree()
+	#xIndicies.shuffle()
+	#print("Y (%s) idle row sum: %s" % [(height - 1), dec2bin(idleRowSums[height-1], width - 1)])
 
 ## https://godotforums.org/d/18970-how-can-i-work-with-binary-numbers
 func dec2bin(dec, len: int = 31) -> String: # Checking up to 32 bits by default
@@ -145,6 +209,7 @@ func setCellv(pos: Vector2i, element: Cell.Elements) -> void:
 	cells[y * width + x].element = element
 	colorArray[y * width + x] = cells[y * width + x].getColor()
 	
+	#quadTree.insert(pos)
 	if cells[y * width + x].isMovible():
 		if element == Cell.Elements.EMPTY:
 			idleRowSums[y] = disableBit(idleRowSums[y], x)

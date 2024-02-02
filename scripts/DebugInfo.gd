@@ -35,3 +35,5 @@ func _process(delta) -> void:
 					#visitedCells += 1
 	DebugDraw2D.set_text("Cells", cells)
 	#DebugDraw2D.set_text("Cells (Visited)", visitedCells)
+
+
