@@ -38,7 +38,7 @@ func initializeArrays() -> void:
 	idleRowSums.resize(height)
 	idleRowSums.fill(0)
 
-func populateQuadTree() -> void:
+func repopulateQuadTree() -> void:
 	quadTree.clear()
 	for y in height:
 		if idleRowSums[y] == 0: # Skip empty rows (x axis)
@@ -95,43 +95,11 @@ func updateCells(quad: QuadTree) -> bool:
 	return updated
 
 func simulate() -> bool:
-	##Copy old cell states
-	#for y in height:
-		#for x in width:
-			#markCellVisited(x, y, false)
-			#var i := y * width + x
-			#cellsOld[i].element = cells[i].element
-			#cellsOld[i].visited = cells[i].visited
-	#
-	#var updated := false
-	#for y in height:
-		#y = height - 1 - y # Needed for gravity to not be instant
-		#if idleRowSums[y] == 0: # Skip empty rows (x axis)
-			#continue
-		#for x in xIndicies:
-			#var cell: Cell = getOldCell(x, y)
-			#match cell.element:
-				#Cell.Elements.SAND when !cell.visited:
-					#if Cell.updateSand(x, y, Cell.Elements.SAND, self):
-						#updated = true # I wish we had |=
-				#Cell.Elements.GAS when !cell.visited:
-					#if Cell.updateGas(x, y, Cell.Elements.GAS, self):
-						#updated = true
-				#Cell.Elements.WATER when !cell.visited:
-					#if Cell.updateLiquid(x, y, Cell.Elements.WATER, self):
-						#updated = true
-				#Cell.Elements.RAINBOW_DUST when !cell.visited:
-					#if Cell.updateSand(x, y, Cell.Elements.RAINBOW_DUST, self):
-						#updated = true
-				#_:
-					#continue
-	#return updated
-	
 	copyOldStates(quadTree)
 	return updateCells(quadTree)
 
 func post() -> void:
-	populateQuadTree()
+	repopulateQuadTree()
 	#xIndicies.shuffle()
 	#print("Y (%s) idle row sum: %s" % [(height - 1), dec2bin(idleRowSums[height-1], width - 1)])
 
@@ -209,8 +177,8 @@ func setCellv(pos: Vector2i, element: Cell.Elements) -> void:
 	cells[y * width + x].element = element
 	colorArray[y * width + x] = cells[y * width + x].getColor()
 	
-	#quadTree.insert(pos)
 	if cells[y * width + x].isMovible():
+		#quadTree.insert(pos)
 		if element == Cell.Elements.EMPTY:
 			idleRowSums[y] = disableBit(idleRowSums[y], x)
 		else:
