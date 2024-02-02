@@ -11,25 +11,28 @@ var selectedElement := Cell.Elements.SAND
 var width: int = 64 # (1152/10)/6 # 6 vertical threads, 19
 var height: int = 36 # (648/10) # 64
 var matrix: CellularMatrix
+
+var image: Image
 var markPassShader := false
+
+var mousePos := Vector2i.ZERO
+var isAdding := false
+var isRemoveing := false
 
 func _ready() -> void:
 	# Calculate width/height
-	var control := Vector2i($CanvasLayer/Control.size)
-	width = control.x / cellSize
-	height = control.y / cellSize
+	var control: Vector2 = $CanvasLayer/Control.size / cellSize
+	width = control.x
+	height = control.y
 	print("Sim Resolution: %s/%s" % [width, height])
 	# Pass width/height to sahder
 	colorRect.material.set_shader_parameter("size", Vector2(width, height))
+	image = Image.create(width, height, false, Image.FORMAT_RGB8)
 	
 	matrix = CellularMatrix.new(width, height)
 	
 	# Initialze screen
 	passToShader()
-
-var mousePos := Vector2i.ZERO
-var isAdding := false
-var isRemoveing := false
 
 func _input(event) -> void:
 	if event is InputEventKey:
@@ -44,8 +47,8 @@ func _input(event) -> void:
 	
 	if event is InputEventMouseMotion:
 		if event.velocity != Vector2.ZERO:
-			mousePos = Vector2i(event.position / Vector2(get_viewport().size) * Vector2(width, height))
-			#mousePos = Vector2i(event.position) / cellSize # Works when Project/Settings/Display/Window/Stretch/Mode is 'viewport'
+			#mousePos = Vector2i(event.position / Vector2(get_viewport().size) * Vector2(width, height))
+			mousePos = Vector2i(event.position) / cellSize # Works when Project/Settings/Display/Window/Stretch/Mode is 'viewport'
 	
 	if event is InputEventMouseButton:
 		if event.button_index == MOUSE_BUTTON_WHEEL_UP && event.pressed:
@@ -58,7 +61,6 @@ func _input(event) -> void:
 
 #func _process(delta) -> void:
 	#handleMouse()
-	#mousePos = Vector2i(get_local_mouse_position()) / cellSize
 
 func handleMouse() -> void:
 	if isAdding || isRemoveing:
@@ -92,14 +94,13 @@ func _physics_process(delta) -> void:
 		markPassShader = false
 
 func passToShader() -> void:
-	var image := Image.create(width, height, false, Image.FORMAT_RGB8)
+	#var image := Image.create(width, height, false, Image.FORMAT_RGB8)
 	image.fill(Color.BLACK)
 	for x in width:
 		for y in height:
 			var cell: Cell = matrix.getCell(x, y)
 			if cell.element != Cell.Elements.EMPTY:
 				image.set_pixel(x, y, matrix.colorArray[y * width + x])
-				#image.set_pixel(x, y, cell.getColor())
 	
 	var texture = ImageTexture.create_from_image(image)
 	colorRect.material.set_shader_parameter("tex", texture)
