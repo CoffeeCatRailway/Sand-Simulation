@@ -4,7 +4,6 @@ extends Resource
 var width: int = 1
 var height: int = 1
 
-var xIndicies: Array[int] = []
 var idleRowSums: Array[int] = [] # Keeps track of how many tiles are in each row
 
 var cells: Array[Cell] = []
@@ -26,7 +25,6 @@ func initializeArrays() -> void:
 	cellsOld.resize(width * height)
 	colorArray.resize(width * height)
 	for x in width:
-		xIndicies.append(x)
 		for y in height:
 			var i := y * width + x
 			var cell := Cell.new()
@@ -34,7 +32,6 @@ func initializeArrays() -> void:
 			cellsOld[i] = cell
 			colorArray[i] = cell.getColor()
 	
-	xIndicies.shuffle()
 	idleRowSums.resize(height)
 	idleRowSums.fill(0)
 
@@ -72,14 +69,17 @@ func updateCells(quad: QuadTree) -> bool:
 				Cell.Elements.SAND when !cell.visited:
 					if Cell.updateSand(p.x, p.y, Cell.Elements.SAND, self):
 						updated = true # I wish we had |=
-				Cell.Elements.GAS when !cell.visited:
-					if Cell.updateGas(p.x, p.y, Cell.Elements.GAS, self):
+				Cell.Elements.STEAM when !cell.visited:
+					if Cell.updateGas(p.x, p.y, Cell.Elements.STEAM, self):
 						updated = true
 				Cell.Elements.WATER when !cell.visited:
 					if Cell.updateLiquid(p.x, p.y, Cell.Elements.WATER, self):
 						updated = true
 				Cell.Elements.RAINBOW_DUST when !cell.visited:
 					if Cell.updateSand(p.x, p.y, Cell.Elements.RAINBOW_DUST, self):
+						updated = true
+				Cell.Elements.LAVA when !cell.visited:
+					if Cell.updateLava(p.x, p.y, Cell.Elements.LAVA, self):
 						updated = true
 				_:
 					continue
@@ -100,7 +100,6 @@ func simulate() -> bool:
 
 func post() -> void:
 	repopulateQuadTree()
-	#xIndicies.shuffle()
 	#print("Y (%s) idle row sum: %s" % [(height - 1), dec2bin(idleRowSums[height-1], width - 1)])
 
 ## https://godotforums.org/d/18970-how-can-i-work-with-binary-numbers

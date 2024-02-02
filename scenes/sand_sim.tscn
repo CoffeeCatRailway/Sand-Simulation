@@ -38,5 +38,6 @@ grow_horizontal = 2
 grow_vertical = 2
 
 [node name="Node2D" type="Node2D" parent="CanvasLayer" node_paths=PackedStringArray("sim")]
+visible = false
 script = ExtResource("3_yvirg")
 sim = NodePath("../..")

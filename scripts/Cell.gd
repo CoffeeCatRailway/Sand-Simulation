@@ -8,10 +8,11 @@ enum Elements
 {
 	EMPTY,
 	SAND,
-	GAS,
+	STEAM,
 	WATER,
 	STONE,
-	RAINBOW_DUST
+	RAINBOW_DUST,
+	LAVA
 }
 
 func getColor() -> Color:
@@ -19,7 +20,7 @@ func getColor() -> Color:
 	match element:
 		Elements.SAND:
 			res = Color.SANDY_BROWN
-		Elements.GAS:
+		Elements.STEAM:
 			res = Color.LIGHT_GRAY
 		Elements.WATER:
 			res = Color.CORNFLOWER_BLUE
@@ -28,6 +29,8 @@ func getColor() -> Color:
 		Elements.RAINBOW_DUST:
 			var hue = fmod(Time.get_unix_time_from_system(), 10.)
 			return Color.from_hsv(hue / 10., 1., .8)
+		Elements.LAVA:
+			return Color.from_hsv(randf_range(.04, .125), 1., .8)
 		_:
 			return Color.BLACK
 	res.v -= randf_range(0., .1)
@@ -37,7 +40,7 @@ func getDensity() -> int: #0-100  0 being nothing
 	match element:
 		Elements.SAND:
 			return 20
-		Elements.GAS:
+		Elements.STEAM:
 			return 5
 		Elements.WATER:
 			return 10
@@ -45,6 +48,8 @@ func getDensity() -> int: #0-100  0 being nothing
 			return 50
 		Elements.RAINBOW_DUST:
 			return 20
+		Elements.LAVA:
+			return 50
 		_:
 			return 0
 
@@ -59,11 +64,11 @@ func isMovible() -> bool:
 
 ## Element update methods ##
 
-static func updateSand(x: int, y: int, element: Cell.Elements, matrix: CellularMatrix) -> bool:
+static func updateSand(x: int, y: int, element: Elements, matrix: CellularMatrix) -> bool:
 	var dx: int = x + (1 if randf() > .5 else -1)
-	var down: bool = (matrix.getOldCell(x, y + 1).element == Cell.Elements.EMPTY) && matrix.checkBounds(x, y + 1) && !matrix.getOldCell(x, y + 1).visited
-	var side: bool = (matrix.getOldCell(dx, y).element == Cell.Elements.EMPTY) && matrix.checkBounds(dx, y) && !matrix.getOldCell(dx, y).visited
-	var sided: bool = side && (matrix.getOldCell(dx, y + 1).element == Cell.Elements.EMPTY) && matrix.checkBounds(dx, y + 1) && !matrix.getOldCell(dx, y + 1).visited
+	var down: bool = (matrix.getOldCell(x, y + 1).element == Elements.EMPTY) && matrix.checkBounds(x, y + 1) && !matrix.getOldCell(x, y + 1).visited
+	var side: bool = (matrix.getOldCell(dx, y).element == Elements.EMPTY) && matrix.checkBounds(dx, y) && !matrix.getOldCell(dx, y).visited
+	var sided: bool = side && (matrix.getOldCell(dx, y + 1).element == Elements.EMPTY) && matrix.checkBounds(dx, y + 1) && !matrix.getOldCell(dx, y + 1).visited
 	
 	if down:
 		matrix.setCell(x, y + 1, element)
@@ -73,18 +78,18 @@ static func updateSand(x: int, y: int, element: Cell.Elements, matrix: CellularM
 		matrix.markOldCellVisited(dx, y + 1)
 	
 	if down || sided:
-		matrix.setCell(x, y, Cell.Elements.EMPTY)
+		matrix.setCell(x, y, Elements.EMPTY)
 		#markPassShader = true
 		return true
 	return false
 
-static func updateGas(x: int, y: int, element: Cell.Elements, matrix: CellularMatrix) -> bool:
+static func updateGas(x: int, y: int, element: Elements, matrix: CellularMatrix) -> bool:
 	if !matrix.compareDensityAbove(x, y):
 		var dx: int = x + (1 if randf() > .5 else -1)
 		var dy: int = y + (1 if randf() > .5 else -1)
-		var vert: bool = (matrix.getOldCell(x, dy).element == Cell.Elements.EMPTY) && matrix.checkBounds(x, dy) && !matrix.getOldCell(x, dy).visited
-		var side: bool = (matrix.getOldCell(dx, y).element == Cell.Elements.EMPTY) && matrix.checkBounds(dx, y) && !matrix.getOldCell(dx, y).visited
-		var diag: bool = side && (matrix.getOldCell(dx, dy).element == Cell.Elements.EMPTY) && matrix.checkBounds(dx, dy) && !matrix.getOldCell(dx, dy).visited
+		var vert: bool = (matrix.getOldCell(x, dy).element == Elements.EMPTY) && matrix.checkBounds(x, dy) && !matrix.getOldCell(x, dy).visited
+		var side: bool = (matrix.getOldCell(dx, y).element == Elements.EMPTY) && matrix.checkBounds(dx, y) && !matrix.getOldCell(dx, y).visited
+		var diag: bool = side && (matrix.getOldCell(dx, dy).element == Elements.EMPTY) && matrix.checkBounds(dx, dy) && !matrix.getOldCell(dx, dy).visited
 		
 		if diag:
 			matrix.setCell(dx, dy, element)
@@ -97,18 +102,18 @@ static func updateGas(x: int, y: int, element: Cell.Elements, matrix: CellularMa
 			matrix.markOldCellVisited(dx, y)
 		
 		if vert || side || diag:
-			matrix.setCell(x, y, Cell.Elements.EMPTY)
+			matrix.setCell(x, y, Elements.EMPTY)
 			#markPassShader = true
 			return true
 	return false
 
 # https://stackoverflow.com/questions/66522958/water-in-a-falling-sand-simulation
-static func updateLiquid(x: int, y: int, element: Cell.Elements, matrix: CellularMatrix) -> bool:
+static func updateLiquid(x: int, y: int, element: Elements, matrix: CellularMatrix) -> bool:
 	if !matrix.compareDensityAbove(x, y):
 		var dx: int = x + (1 if randf() > .5 else -1)
-		var down: bool = (matrix.getOldCell(x, y + 1).element == Cell.Elements.EMPTY) && matrix.checkBounds(x, y + 1) && !matrix.getOldCell(x, y + 1).visited
-		var side: bool = (matrix.getOldCell(dx, y).element == Cell.Elements.EMPTY) && matrix.checkBounds(dx, y) && !matrix.getOldCell(dx, y).visited
-		var sided: bool = side && (matrix.getOldCell(dx, y + 1).element == Cell.Elements.EMPTY) && matrix.checkBounds(dx, y + 1) && !matrix.getOldCell(dx, y + 1).visited
+		var down: bool = (matrix.getOldCell(x, y + 1).element == Elements.EMPTY) && matrix.checkBounds(x, y + 1) && !matrix.getOldCell(x, y + 1).visited
+		var side: bool = (matrix.getOldCell(dx, y).element == Elements.EMPTY) && matrix.checkBounds(dx, y) && !matrix.getOldCell(dx, y).visited
+		var sided: bool = side && (matrix.getOldCell(dx, y + 1).element == Elements.EMPTY) && matrix.checkBounds(dx, y + 1) && !matrix.getOldCell(dx, y + 1).visited
 		
 		if down:
 			matrix.setCell(x, y + 1, element)
@@ -121,7 +126,31 @@ static func updateLiquid(x: int, y: int, element: Cell.Elements, matrix: Cellula
 			matrix.markOldCellVisited(dx, y)
 		
 		if down || sided || side:
-			matrix.setCell(x, y, Cell.Elements.EMPTY)
+			matrix.setCell(x, y, Elements.EMPTY)
 			#markPassShader = true
 			return true
 	return false
+
+static func updateLava(x: int, y: int, element: Elements, matrix: CellularMatrix) -> bool:
+	var up: bool = (matrix.getOldCell(x, y - 1).element == Elements.WATER) && matrix.checkBounds(x, y - 1)
+	var down: bool = (matrix.getOldCell(x, y + 1).element == Elements.WATER) && matrix.checkBounds(x, y + 1)
+	var left: bool = (matrix.getOldCell(x - 1, y).element == Elements.WATER) && matrix.checkBounds(x - 1, y)
+	var right: bool = (matrix.getOldCell(x + 1, y).element == Elements.WATER) && matrix.checkBounds(x + 1, y)
+	
+	if up:
+		matrix.setCell(x, y - 1, Elements.STEAM)
+		matrix.markOldCellVisited(x, y - 1)
+	elif down:
+		matrix.setCell(x, y + 1, Elements.STEAM)
+		matrix.markOldCellVisited(x, y + 1)
+	elif left:
+		matrix.setCell(x - 1, y, Elements.STEAM)
+		matrix.markOldCellVisited(x - 1, y)
+	elif right:
+		matrix.setCell(x + 1, y, Elements.STEAM)
+		matrix.markOldCellVisited(x + 1, y)
+	
+	if up || down || left || right:
+		matrix.setCell(x, y, Elements.STONE)
+		return true
+	return randf() < .4 && updateLiquid(x, y, element, matrix)
