@@ -44,6 +44,12 @@ func repopulateQuadTree() -> void:
 			var cell := getOldCell(x, y)
 			if cell.isMovible():
 				quadTree.insert(Vector2i(x, y))
+	
+	#var points := quadTree.queryRange(Rect2i(0, 0, width, height))
+	#quadTree.clear()
+	#for p in points:
+		#if getOldCellv(p).isMovible():
+			#quadTree.insert(p)
 
 func copyOldStates(quad: QuadTree) -> void:
 	for p in quad.points:
@@ -122,6 +128,8 @@ func disableBit(mask: int, i: int) -> int:
 
 # if simulate is true cells won't be swapped
 func compareDensityAbove(x: int, y: int, _simulate: bool = false) -> int:
+	if !checkBounds(x, y - 1):
+		return 0
 	var cellUp := getCell(x, y - 1)
 	var cell := getCell(x, y)
 	var cellTypeUp := cellUp.element
@@ -135,53 +143,50 @@ func compareDensityAbove(x: int, y: int, _simulate: bool = false) -> int:
 		return 1
 	return 0
 
-func getOldCell(x: int, y: int) -> Cell:
-	return getOldCellv(Vector2i(x, y))
-
 func getOldCellv(pos: Vector2i) -> Cell:
-	var x := clampi(pos.x, 0, width - 1)
-	var y := clampi(pos.y, 0, height - 1)
-	return cellsOld[y * width + x]
+	return getOldCell(pos.x, pos.y)
 
-func markOldCellVisited(x: int, y: int, visited: bool = true):
-	return markOldCellVisitedv(Vector2i(x, y), visited)
+func getOldCell(x: int, y: int) -> Cell:
+	if checkBounds(x, y):
+		return cellsOld[y * width + x]
+	return null
 
 func markOldCellVisitedv(pos: Vector2i, visited: bool = true):
-	var x := clampi(pos.x, 0, width - 1)
-	var y := clampi(pos.y, 0, height - 1)
-	cellsOld[y * width + x].visited = visited
+	return markOldCellVisited(pos.x, pos.y, visited)
 
-func getCell(x: int, y: int) -> Cell:
-	return getCellv(Vector2i(x, y))
+func markOldCellVisited(x: int, y: int, visited: bool = true):
+	if checkBounds(x, y):
+		cellsOld[y * width + x].visited = visited
 
 func getCellv(pos: Vector2i) -> Cell:
-	var x := clampi(pos.x, 0, width - 1)
-	var y := clampi(pos.y, 0, height - 1)
-	return cells[y * width + x]
+	return getCell(pos.x, pos.y)
 
-func markCellVisited(x: int, y: int, visited: bool = true):
-	return markCellVisitedv(Vector2i(x, y), visited)
+func getCell(x: int, y: int) -> Cell:
+	if checkBounds(x, y):
+		return cells[y * width + x]
+	return null
 
 func markCellVisitedv(pos: Vector2i, visited: bool = true):
-	var x := clampi(pos.x, 0, width - 1)
-	var y := clampi(pos.y, 0, height - 1)
-	cells[y * width + x].visited = visited
+	return markCellVisited(pos.x, pos.y, visited)
 
-func setCell(x: int, y: int, element: Cell.Elements) -> void:
-	setCellv(Vector2i(x, y), element)
+func markCellVisited(x: int, y: int, visited: bool = true):
+	if checkBounds(x, y):
+		cells[y * width + x].visited = visited
 
 func setCellv(pos: Vector2i, element: Cell.Elements) -> void:
-	var x := clampi(pos.x, 0, width - 1)
-	var y := clampi(pos.y, 0, height - 1)
-	cells[y * width + x].element = element
-	colorArray[y * width + x] = cells[y * width + x].getColor()
-	
-	if cells[y * width + x].isMovible():
-		#quadTree.insert(pos)
-		if element == Cell.Elements.EMPTY:
-			idleRowSums[y] = disableBit(idleRowSums[y], x)
-		else:
-			idleRowSums[y] = enableBit(idleRowSums[y], x)
+	setCell(pos.x, pos.y, element)
+
+func setCell(x: int, y: int, element: Cell.Elements) -> void:
+	if checkBounds(x, y):
+		cells[y * width + x].element = element
+		colorArray[y * width + x] = cells[y * width + x].getColor()
+		
+		if cells[y * width + x].isMovible():
+			#quadTree.insert(pos)
+			if element == Cell.Elements.EMPTY:
+				idleRowSums[y] = disableBit(idleRowSums[y], x)
+			else:
+				idleRowSums[y] = enableBit(idleRowSums[y], x)
 
 # Returns true if inside simulation bounds
 func checkBounds(x: int, y: int) -> bool:

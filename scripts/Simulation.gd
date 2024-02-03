@@ -69,6 +69,8 @@ func handleMouse() -> void:
 			for y in range(-brushRadius, brushRadius + 1):
 				pos.x = mousePos.x + x
 				pos.y = mousePos.y + y
+				if !matrix.checkBounds(pos.x, pos.y):
+					continue
 				if vec2iDist(mousePos, pos) <= brushRadius || squareBrush:
 					if isRemoveing:
 						matrix.setCellv(pos, Cell.Elements.EMPTY)
