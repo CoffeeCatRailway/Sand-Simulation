@@ -3,7 +3,7 @@
 [ext_resource type="Script" path="res://scripts/Simulation.gd" id="1_vlsb0"]
 [ext_resource type="Shader" path="res://shaders/sand_sim.gdshader" id="3_gdxei"]
 [ext_resource type="Script" path="res://scripts/DebugInfo.gd" id="3_o7an3"]
-[ext_resource type="Script" path="res://scripts/QuadTreeVisual.gd" id="3_yvirg"]
+[ext_resource type="Script" path="res://scripts/quad_tree/QuadTreeVisual.gd" id="3_yvirg"]
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_w8h2r"]
 shader = ExtResource("3_gdxei")
