@@ -9,6 +9,7 @@ var idleRowSums: Array[int] = [] # Keeps track of how many tiles are in each row
 var cells: Array[Cell] = []
 var cellsOld: Array[Cell] = []
 var colorArray: PackedColorArray = PackedColorArray()
+var pressureArray: PackedInt32Array = PackedInt32Array()
 
 var quadTree: QuadTree
 
@@ -24,6 +25,9 @@ func initializeArrays() -> void:
 	cells.resize(width * height)
 	cellsOld.resize(width * height)
 	colorArray.resize(width * height)
+	pressureArray.resize(width * height)
+	pressureArray.fill(0)
+	
 	for x in width:
 		for y in height:
 			var i := y * width + x
@@ -51,6 +55,34 @@ func postSimulate() -> void:
 	#for p in points:
 		#if getOldCellv(p).isMovible():
 			#quadTree.insert(p)
+	
+	pressureArray.fill(0)
+	calculatePressure(quadTree)
+
+func calculatePressure(quad: QuadTree) -> void:
+	for p in quad.points:
+		var cell := getOldCell(p.x, p.y)
+		var vPressure: int = 1
+		if checkBounds(p.x, p.y - 1) && getOldCell(p.x, p.y - 1).isMovible():
+			vPressure += pressureArray[(p.y - 1) * width + p.x]
+		
+		# Add average pressure of adjacent cells
+		#var hPressure: int = 0
+		#for i in 2:
+			#if checkBounds(p.x - i - 1, p.y) && getOldCell(p.x - i - 1, p.y).isMovible():
+				#hPressure += pressureArray[p.y * width + (p.x - i - 1)]
+			#if checkBounds(p.x + i + 1, p.y) && getOldCell(p.x + i + 1, p.y).isMovible():
+				#hPressure += pressureArray[p.y * width + (p.x + i + 1)]
+		#hPressure /= 4
+		pressureArray[p.y * width + p.x] = vPressure# + hPressure# + cell.getDensity()
+	
+	if !quad.northWest:
+		return
+	
+	calculatePressure(quad.northWest)
+	calculatePressure(quad.northEast)
+	calculatePressure(quad.southWest)
+	calculatePressure(quad.southEast)
 
 func copyOldStates(quad: QuadTree) -> void:
 	for p in quad.points:

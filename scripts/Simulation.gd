@@ -103,6 +103,8 @@ func passToShader() -> void:
 			var cell: Cell = matrix.getCell(x, y)
 			if cell.element != Cell.Elements.EMPTY:
 				image.set_pixel(x, y, matrix.colorArray[y * width + x])
+				#var r: float = float(matrix.pressureArray[y * width + x]) / float(height)#(height * 100.)
+				#image.set_pixel(x, y, Color(r, .05, .05))
 	
 	var texture = ImageTexture.create_from_image(image)
 	colorRect.material.set_shader_parameter("tex", texture)
