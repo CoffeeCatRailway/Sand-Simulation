@@ -83,9 +83,9 @@ func queryRange(range: Rect2) -> Array[Vector2i]:
 		return pointsInRange
 	
 	# Check objects at this quad level
-	for p in points.size():
-		if range.has_point(points[p]):
-			pointsInRange.append(points[p])
+	for p in points:
+		if range.has_point(p):
+			pointsInRange.append(p)
 	
 	# Terminate here, if there are no children
 	if !northWest:

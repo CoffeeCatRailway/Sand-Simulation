@@ -21,7 +21,7 @@ var isRemoveing := false
 
 func _ready() -> void:
 	# Calculate width/height
-	var control: Vector2 = $CanvasLayer/Control.size / cellSize
+	var control: Vector2 = get_viewport_rect().size / cellSize
 	width = control.x
 	height = control.y
 	print("Sim Resolution: %s/%s" % [width, height])

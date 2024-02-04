@@ -35,7 +35,8 @@ func initializeArrays() -> void:
 	idleRowSums.resize(height)
 	idleRowSums.fill(0)
 
-func repopulateQuadTree() -> void:
+func postSimulate() -> void:
+	# Re-populate quad tree
 	quadTree.clear()
 	for y in height:
 		if idleRowSums[y] == 0: # Skip empty rows (x axis)
@@ -76,7 +77,7 @@ func updateCells(quad: QuadTree) -> bool:
 					if Cell.updateSand(p.x, p.y, Cell.Elements.SAND, self):
 						updated = true # I wish we had |=
 				Cell.Elements.STEAM when !cell.visited:
-					if Cell.updateGas(p.x, p.y, Cell.Elements.STEAM, self):
+					if Cell.updateSteam(p.x, p.y, Cell.Elements.STEAM, self):
 						updated = true
 				Cell.Elements.WATER when !cell.visited:
 					if Cell.updateLiquid(p.x, p.y, Cell.Elements.WATER, self):
@@ -105,7 +106,7 @@ func simulate() -> bool:
 	return updateCells(quadTree)
 
 func post() -> void:
-	repopulateQuadTree()
+	postSimulate()
 	#print("Y (%s) idle row sum: %s" % [(height - 1), dec2bin(idleRowSums[height-1], width - 1)])
 
 ## https://godotforums.org/d/18970-how-can-i-work-with-binary-numbers

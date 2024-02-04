@@ -4,7 +4,10 @@ extends Node2D
 var size: Vector2
 
 func _process(_delta) -> void:
-	if !size:
+	if Input.is_action_just_released("num0"):
+		visible = !visible
+		
+	if size.x != sim.width || size.y != sim.height:
 		size = Vector2(sim.width, sim.height)
 	queue_redraw()
 
@@ -22,5 +25,8 @@ func drawQuadTree(quad: QuadTree) -> void:
 	drawQuadTree(quad.southWest)
 	drawQuadTree(quad.southEast)
 
+func resizeVec2(pos: Vector2) -> Vector2:
+	return pos / size * get_viewport_rect().size
+
 func resizeRect(rect: Rect2) -> Rect2:
-	return Rect2(rect.position / size * get_viewport_rect().size, rect.size / size * get_viewport_rect().size)
+	return Rect2(resizeVec2(rect.position), resizeVec2(rect.size))
