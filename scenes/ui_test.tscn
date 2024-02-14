@@ -1,0 +1,156 @@
+[gd_scene load_steps=16 format=3 uid="uid://cc4txsgwbcopt"]
+
+[ext_resource type="Texture2D" uid="uid://bwas5ial2hlnq" path="res://assets/ui/background.png" id="1_8cuqg"]
+[ext_resource type="Shader" path="res://shaders/paletteSwapper.gdshader" id="2_spasd"]
+[ext_resource type="Texture2D" uid="uid://x4rmmkbqjlpq" path="res://assets/ui/asthetic_palette.png" id="3_ufdmu"]
+[ext_resource type="Texture2D" uid="uid://dca3wduvtnv8k" path="res://assets/ui/asthetic.png" id="4_3okfy"]
+[ext_resource type="FontFile" uid="uid://cklc3t00tp6q" path="res://assets/ui/fonts/font6.fnt" id="5_iihy3"]
+[ext_resource type="PackedScene" uid="uid://bllqicxx2hng6" path="res://scenes/button.tscn" id="6_pcdq4"]
+[ext_resource type="Script" path="res://scripts/ui/ElementButtonTest.gd" id="6_yw83t"]
+[ext_resource type="Texture2D" uid="uid://b2swiqxag4gm3" path="res://assets/ui/button_element_palette.png" id="7_5t03s"]
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_dwfjq"]
+shader = ExtResource("2_spasd")
+shader_parameter/paletteIdx = 5
+shader_parameter/palette = ExtResource("3_ufdmu")
+
+[sub_resource type="LabelSettings" id="LabelSettings_3agfv"]
+line_spacing = 0.0
+font = ExtResource("5_iihy3")
+font_size = 29
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_ss3jf"]
+shader = ExtResource("2_spasd")
+shader_parameter/paletteIdx = 1
+shader_parameter/palette = ExtResource("7_5t03s")
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_on1c7"]
+shader = ExtResource("2_spasd")
+shader_parameter/paletteIdx = 0
+shader_parameter/palette = ExtResource("7_5t03s")
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_sj1du"]
+shader = ExtResource("2_spasd")
+shader_parameter/paletteIdx = 2
+shader_parameter/palette = ExtResource("7_5t03s")
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_655fb"]
+shader = ExtResource("2_spasd")
+shader_parameter/paletteIdx = 3
+shader_parameter/palette = ExtResource("7_5t03s")
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_5g12f"]
+shader = ExtResource("2_spasd")
+shader_parameter/paletteIdx = 4
+shader_parameter/palette = ExtResource("7_5t03s")
+
+[node name="UI_Test" type="Node2D"]
+
+[node name="CanvasLayer" type="CanvasLayer" parent="."]
+follow_viewport_enabled = true
+
+[node name="Control" type="Control" parent="CanvasLayer"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="background" type="TextureRect" parent="CanvasLayer/Control"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+texture = ExtResource("1_8cuqg")
+
+[node name="asthetic" type="TextureRect" parent="CanvasLayer/Control"]
+visible = false
+material = SubResource("ShaderMaterial_dwfjq")
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+texture = ExtResource("4_3okfy")
+
+[node name="Label" type="Label" parent="CanvasLayer/Control"]
+layout_mode = 0
+offset_left = 36.0
+offset_top = 240.0
+offset_right = 941.0
+offset_bottom = 348.0
+text = "abcdefghijklm
+nopqrstuvwxyz
+yeet"
+label_settings = SubResource("LabelSettings_3agfv")
+
+[node name="btnContainer" type="Control" parent="CanvasLayer/Control"]
+anchors_preset = 0
+offset_left = 24.0
+offset_top = 504.0
+offset_right = 44.0
+offset_bottom = 524.0
+scale = Vector2(5.5, 5.5)
+script = ExtResource("6_yw83t")
+
+[node name="top" type="HBoxContainer" parent="CanvasLayer/Control/btnContainer"]
+layout_mode = 0
+offset_right = 150.0
+offset_bottom = 10.0
+
+[node name="btnSand" parent="CanvasLayer/Control/btnContainer/top" instance=ExtResource("6_pcdq4")]
+material = SubResource("ShaderMaterial_ss3jf")
+layout_mode = 2
+theme_override_colors/font_color = Color(0.443137, 0.254902, 0.231373, 1)
+theme_override_colors/font_pressed_color = Color(0.196078, 0.168627, 0.156863, 1)
+theme_override_colors/font_hover_color = Color(0.443137, 0.254902, 0.231373, 1)
+theme_override_colors/font_focus_color = Color(0.443137, 0.254902, 0.231373, 1)
+text = "sand"
+
+[node name="btnSteam" parent="CanvasLayer/Control/btnContainer/top" instance=ExtResource("6_pcdq4")]
+material = SubResource("ShaderMaterial_on1c7")
+layout_mode = 2
+text = "steam"
+
+[node name="btnWater" parent="CanvasLayer/Control/btnContainer/top" instance=ExtResource("6_pcdq4")]
+material = SubResource("ShaderMaterial_sj1du")
+layout_mode = 2
+theme_override_colors/font_color = Color(0.156863, 0.360784, 0.768627, 1)
+theme_override_colors/font_pressed_color = Color(0.0784314, 0.203922, 0.392157, 1)
+theme_override_colors/font_hover_color = Color(0.156863, 0.360784, 0.768627, 1)
+theme_override_colors/font_focus_color = Color(0.156863, 0.360784, 0.768627, 1)
+text = "water"
+
+[node name="btnStone" parent="CanvasLayer/Control/btnContainer/top" instance=ExtResource("6_pcdq4")]
+material = SubResource("ShaderMaterial_655fb")
+layout_mode = 2
+theme_override_colors/font_color = Color(0.2, 0.223529, 0.254902, 1)
+theme_override_colors/font_pressed_color = Color(0.196078, 0.168627, 0.156863, 1)
+theme_override_colors/font_hover_color = Color(0.2, 0.223529, 0.254902, 1)
+theme_override_colors/font_focus_color = Color(0.2, 0.223529, 0.254902, 1)
+text = "stone"
+
+[node name="bottom" type="HBoxContainer" parent="CanvasLayer/Control/btnContainer"]
+layout_mode = 0
+offset_top = 12.0
+offset_right = 40.0
+offset_bottom = 22.0003
+
+[node name="btnLava" parent="CanvasLayer/Control/btnContainer/bottom" instance=ExtResource("6_pcdq4")]
+material = SubResource("ShaderMaterial_5g12f")
+layout_mode = 2
+theme_override_colors/font_color = Color(0.705882, 0.12549, 0.164706, 1)
+theme_override_colors/font_pressed_color = Color(0.45098, 0.0901961, 0.176471, 1)
+theme_override_colors/font_hover_color = Color(0.705882, 0.12549, 0.164706, 1)
+theme_override_colors/font_focus_color = Color(0.705882, 0.12549, 0.164706, 1)
+text = "lava"
+
+[connection signal="pressed" from="CanvasLayer/Control/btnContainer/top/btnSand" to="CanvasLayer/Control/btnContainer" method="_on_btn_pressed" binds= [1]]
+[connection signal="pressed" from="CanvasLayer/Control/btnContainer/top/btnSteam" to="CanvasLayer/Control/btnContainer" method="_on_btn_pressed" binds= [2]]
+[connection signal="pressed" from="CanvasLayer/Control/btnContainer/top/btnWater" to="CanvasLayer/Control/btnContainer" method="_on_btn_pressed" binds= [3]]
+[connection signal="pressed" from="CanvasLayer/Control/btnContainer/top/btnStone" to="CanvasLayer/Control/btnContainer" method="_on_btn_pressed" binds= [4]]
+[connection signal="pressed" from="CanvasLayer/Control/btnContainer/bottom/btnLava" to="CanvasLayer/Control/btnContainer" method="_on_btn_pressed" binds= [6]]

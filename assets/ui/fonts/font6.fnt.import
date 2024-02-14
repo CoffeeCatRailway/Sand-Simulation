@@ -1,0 +1,17 @@
+[remap]
+
+importer="font_data_bmfont"
+type="FontFile"
+uid="uid://cklc3t00tp6q"
+path="res://.godot/imported/font6.fnt-b3c0ac8de447f2c9f47d8aba59cc0f1e.fontdata"
+
+[deps]
+
+source_file="res://assets/ui/fonts/font6.fnt"
+dest_files=["res://.godot/imported/font6.fnt-b3c0ac8de447f2c9f47d8aba59cc0f1e.fontdata"]
+
+[params]
+
+fallbacks=[]
+compress=true
+scaling_mode=1

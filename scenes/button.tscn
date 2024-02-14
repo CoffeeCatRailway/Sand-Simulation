@@ -1,0 +1,17 @@
+[gd_scene load_steps=5 format=3 uid="uid://bllqicxx2hng6"]
+
+[ext_resource type="Shader" path="res://shaders/paletteSwapper.gdshader" id="1_wvxns"]
+[ext_resource type="Texture2D" uid="uid://b2swiqxag4gm3" path="res://assets/ui/button_element_palette.png" id="2_7rotu"]
+[ext_resource type="Theme" uid="uid://c06livmaka3pk" path="res://assets/ui/theme_button_element.tres" id="3_fcdm8"]
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_b754l"]
+shader = ExtResource("1_wvxns")
+shader_parameter/paletteIdx = 0
+shader_parameter/palette = ExtResource("2_7rotu")
+
+[node name="Button" type="Button"]
+material = SubResource("ShaderMaterial_b754l")
+offset_right = 6.0
+offset_bottom = 4.0
+theme = ExtResource("3_fcdm8")
+text = "button"
