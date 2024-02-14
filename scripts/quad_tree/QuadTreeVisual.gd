@@ -26,7 +26,7 @@ func drawQuadTree(quad: QuadTree) -> void:
 	drawQuadTree(quad.southEast)
 
 func resizeVec2(pos: Vector2) -> Vector2:
-	return pos / size * get_viewport_rect().size
+	return pos / size * sim.colorRect.size# * get_viewport_rect().size
 
 func resizeRect(rect: Rect2) -> Rect2:
-	return Rect2(resizeVec2(rect.position), resizeVec2(rect.size))
+	return Rect2(resizeVec2(rect.position) + sim.colorRect.position, resizeVec2(rect.size))
