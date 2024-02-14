@@ -48,7 +48,14 @@ func _input(event) -> void:
 	if event is InputEventMouseMotion:
 		if event.velocity != Vector2.ZERO:
 			#mousePos = Vector2i(event.position / Vector2(get_viewport().size) * Vector2(width, height))
-			mousePos = Vector2i(event.position) / cellSize # Works when Project/Settings/Display/Window/Stretch/Mode is 'viewport'
+			#mousePos = Vector2i(event.position) / cellSize # Works when Project/Settings/Display/Window/Stretch/Mode is 'viewport'
+			var mp: Vector2 = event.position
+			mp -= colorRect.position
+			mp /= colorRect.size
+			mp.x *= width
+			mp.y *= height
+			mousePos.x = roundi(mp.x)
+			mousePos.y = roundi(mp.y)
 	
 	if event is InputEventMouseButton:
 		if event.button_index == MOUSE_BUTTON_WHEEL_UP && event.pressed:
