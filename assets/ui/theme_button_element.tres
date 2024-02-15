@@ -1,6 +1,6 @@
 [gd_resource type="Theme" load_steps=8 format=3 uid="uid://c06livmaka3pk"]
 
-[ext_resource type="FontFile" uid="uid://cklc3t00tp6q" path="res://assets/ui/fonts/font6.fnt" id="1_3aw0f"]
+[ext_resource type="FontFile" uid="uid://chv1m0dcy8cyv" path="res://assets/ui/fonts/font6b.fnt" id="1_8i36c"]
 [ext_resource type="Texture2D" uid="uid://2wtyfc45i4u" path="res://assets/ui/button_element.png" id="1_513kv"]
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_6fth7"]
@@ -44,7 +44,8 @@ texture_margin_bottom = 2.0
 region_rect = Rect2(0, 8, 14, 7)
 
 [resource]
-default_font = ExtResource("1_3aw0f")
+default_font = ExtResource("1_8i36c")
+default_font_size = 6
 Button/colors/font_color = Color(0.427451, 0.458824, 0.552941, 1)
 Button/colors/font_disabled_color = Color(0.290196, 0.329412, 0.384314, 0.501961)
 Button/colors/font_focus_color = Color(0.427451, 0.458824, 0.552941, 1)
@@ -61,8 +62,8 @@ Button/colors/icon_pressed_color = Color(1, 1, 1, 1)
 Button/constants/h_separation = 4
 Button/constants/icon_max_width = 0
 Button/constants/outline_size = 0
-Button/font_sizes/font_size = 4
-Button/fonts/font = ExtResource("1_3aw0f")
+Button/font_sizes/font_size = 6
+Button/fonts/font = ExtResource("1_8i36c")
 Button/styles/disabled = SubResource("StyleBoxEmpty_6fth7")
 Button/styles/focus = SubResource("StyleBoxEmpty_hayqd")
 Button/styles/hover = SubResource("StyleBoxTexture_p87gx")
