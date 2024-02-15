@@ -2,14 +2,13 @@ class_name Simulation
 extends Node2D
 
 @onready var colorRect: ColorRect = $CanvasLayer/Control/ColorRect
-@export var cellSize: int = 10
+@export_range(16, 160, 1, "or_greater") var width: int = 160
+@export_range(9, 90, 1, "or_greater") var height: int = 90
 
 @export var brushRadius: int = 3
 @export var squareBrush: bool = false
 var selectedElement := Cell.Elements.SAND
 
-var width: int = 64 # (1152/10)/6 # 6 vertical threads, 19
-var height: int = 36 # (648/10) # 64
 var matrix: CellularMatrix
 
 var image: Image
@@ -21,10 +20,8 @@ var isRemoveing := false
 
 func _ready() -> void:
 	# Calculate width/height
-	var control: Vector2 = get_viewport_rect().size / cellSize
-	width = control.x
-	height = control.y
 	print("Sim Resolution: %s/%s" % [width, height])
+	
 	# Pass width/height to sahder
 	colorRect.material.set_shader_parameter("size", Vector2(width, height))
 	image = Image.create(width, height, false, Image.FORMAT_RGB8)
@@ -35,6 +32,7 @@ func _ready() -> void:
 	passToShader()
 
 func _input(event) -> void:
+	## Brush
 	if event is InputEventKey:
 		if event.is_action_released("brush_shape"):
 			squareBrush = !squareBrush
@@ -45,6 +43,7 @@ func _input(event) -> void:
 			if event.is_action_pressed("num%s" % i):
 				selectedElement = Cell.Elements.values()[i]
 	
+	## Mouse Position
 	if event is InputEventMouseMotion:
 		if event.velocity != Vector2.ZERO:
 			#mousePos = Vector2i(event.position / Vector2(get_viewport().size) * Vector2(width, height))
@@ -57,6 +56,7 @@ func _input(event) -> void:
 			mousePos.x = roundi(mp.x)
 			mousePos.y = roundi(mp.y)
 	
+	## Mouse Buttons
 	if event is InputEventMouseButton:
 		if event.button_index == MOUSE_BUTTON_WHEEL_UP && event.pressed:
 			brushRadius = min(99, brushRadius + 1)
@@ -65,9 +65,6 @@ func _input(event) -> void:
 		
 		isAdding = event.is_action_pressed("mouse_left")
 		isRemoveing = event.is_action_pressed("mouse_right")
-
-#func _process(delta) -> void:
-	#handleMouse()
 
 func handleMouse() -> void:
 	if isAdding || isRemoveing:
