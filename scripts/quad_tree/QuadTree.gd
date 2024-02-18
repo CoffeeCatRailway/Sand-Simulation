@@ -7,18 +7,21 @@ var capacity: int
 
 var points: Array[Vector2i] = []
 
+var parent: QuadTree
+
 # Children
 var northWest: QuadTree
 var northEast: QuadTree
 var southWest: QuadTree
 var southEast: QuadTree
 
-func _init(boundary: Rect2, capacity: int = 8):
+func _init(boundary: Rect2, capacity: int = 8, parent: QuadTree = null):
 	self.boundary = boundary
 	self.capacity = capacity
+	self.parent = parent
 
 func clear() -> void:
-	if points.size() != 0:
+	if !points.is_empty():
 		points.clear()
 	
 	if northWest:
@@ -57,16 +60,63 @@ func insert(point: Vector2i) -> bool:
 	# Otherwise, the point cannot be inserted for some unkown reason (this should never happen)
 	return false
 
+func remove(point: Vector2i) -> bool:
+	# Ignore objects that do not belong in this quad tree
+	if !boundary.has_point(point):
+		return false
+	
+	if points.has(point):
+		points.erase(point)
+		if points.size() <= capacity:
+			merge()
+		return true
+	
+	if northWest:
+		if northWest.remove(point): return true
+		if northEast.remove(point): return true
+		if southWest.remove(point): return true
+		if southEast.remove(point): return true
+	
+	return false
+
+func canEmptyChildren() -> bool:
+	var children := [northWest, northEast, southWest, southEast]
+	for child in children:
+		if !child || child.northWest || !child.points.is_empty():
+			return false
+	return true
+
+func merge() -> void:
+	if northWest && canEmptyChildren():
+		northWest = null
+		northEast = null
+		southWest = null
+		southEast = null
+	
+	if !points.is_empty():
+		#print("Has points", points)
+		return
+	
+	if northWest:
+		var children := [northWest, northEast, southWest, southEast]
+		for child in children:
+			if child.northWest || !child.points.is_empty():
+				return
+	
+	clear()
+	if parent:
+		parent.merge()
+
 func subdivide() -> void:
 	var x := boundary.position.x
 	var y := boundary.position.y
 	var w := boundary.size.x / 2.
 	var h := boundary.size.y / 2.
 	
-	northWest = QuadTree.new(Rect2(x, y, w, h), capacity)
-	northEast = QuadTree.new(Rect2(x + w, y, w, h), capacity)
-	southWest = QuadTree.new(Rect2(x, y + h, w, h), capacity)
-	southEast = QuadTree.new(Rect2(x + w, y + h, w, h), capacity)
+	northWest = QuadTree.new(Rect2(x, y, w, h), capacity, self)
+	northEast = QuadTree.new(Rect2(x + w, y, w, h), capacity, self)
+	southWest = QuadTree.new(Rect2(x, y + h, w, h), capacity, self)
+	southEast = QuadTree.new(Rect2(x + w, y + h, w, h), capacity, self)
 	
 	for p in points:
 		northWest.insert(p)
