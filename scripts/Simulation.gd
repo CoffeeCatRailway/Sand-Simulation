@@ -133,8 +133,13 @@ func dictSubsetFromKeys(keys: Array, from: Dictionary) -> Dictionary:
 			sub[key] = from.get(key)
 	return sub
 
+func getThreadBounds(index: int) -> Rect2:
+	var threadWidth: int = width / threadCount
+	return Rect2(threadWidth * index, 0., threadWidth, height)
+
 func onThreadProcessed(processedCells: Dictionary, index: int) -> void:
 	var time := Time.get_ticks_msec()
+	image.fill_rect(getThreadBounds(index), Color.BLACK)
 	for pos in processedCells.keys():
 		if !checkBounds(pos.x, pos.y):
 			continue
@@ -144,12 +149,15 @@ func onThreadProcessed(processedCells: Dictionary, index: int) -> void:
 		if cell == null:
 			cells.erase(pos)
 			quadTree.remove(pos)
+			#image.set_pixelv(pos, Color.WHITE)
 		else:
 			cells[pos] = cell
 			quadTree.insert(pos)
+			image.set_pixelv(pos, cell.getColor())
 		#cells[pos].visited = false
 		markPassShader = true
 	threads[index].wait_to_finish()
+	
 	print("Processing thread %s took %s miliseconds" % [index, Time.get_ticks_msec() - time])
 
 func startThread(index: int) -> void:
@@ -158,8 +166,7 @@ func startThread(index: int) -> void:
 		#thread.wait_to_finish()
 		return
 	
-	var threadWidth: int = width / threadCount
-	var keys := quadTree.queryRange(Rect2(threadWidth * index, 0., threadWidth, height))
+	var keys := quadTree.queryRange(getThreadBounds(index))
 	if !keys.is_empty():
 		var threadCells := dictSubsetFromKeys(keys, cells)
 		thread.start(processThread.bind(threadCells, index))
@@ -248,15 +255,15 @@ func _physics_process(delta) -> void:
 		markPassShader = false
 
 func passToShader() -> void:
-	var time := Time.get_ticks_msec()
+	#var time := Time.get_ticks_msec()
 	#var image := Image.create(width, height, false, Image.FORMAT_RGB8)
-	image.fill(Color.BLACK)
-	for pos in cells.keys():
-		if !checkBounds(pos.x, pos.y):
-			continue
-		var color = cells.get(pos).getColor()
-		image.set_pixelv(pos, color)
+	#image.fill(Color.BLACK)
+	#for pos in cells.keys():
+		#if !checkBounds(pos.x, pos.y):
+			#continue
+		#var color = cells.get(pos).getColor()
+		#image.set_pixelv(pos, color)
 	
 	var texture = ImageTexture.create_from_image(image)
 	colorRect.material.set_shader_parameter("tex", texture)
-	print("Passing to shader took %s miliseconds" % [Time.get_ticks_msec() - time])
+	#print("Passing to shader took %s miliseconds" % [Time.get_ticks_msec() - time])
