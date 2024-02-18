@@ -4,6 +4,7 @@ extends Node2D
 var elementString: String = ""
 var size: Vector2
 var showQuadTree: bool = false
+var showThreadBounds: bool = false
 
 func _ready() -> void:
 	var graphFps := DebugDraw2D.create_graph("graph_fps")
@@ -37,6 +38,8 @@ func debugInfo(delta) -> void:
 func _process(delta) -> void:
 	if Input.is_action_just_released("debug1"):
 		showQuadTree = !showQuadTree
+	if Input.is_action_just_released("debug2"):
+		showThreadBounds = !showThreadBounds
 	
 	debugInfo(delta)
 	
@@ -49,6 +52,12 @@ func _process(delta) -> void:
 func _draw() -> void:
 	if showQuadTree:
 		drawQuadTree(sim.quadTree)
+	
+	if showThreadBounds:
+		# Draw thread bounds
+		for i in sim.threadCount:
+			var threadWidth: int = sim.width / sim.threadCount
+			draw_rect(resizeRect(Rect2(threadWidth * i, 0., threadWidth, sim.height)), Color.GREEN, false, 1.)
 
 func drawQuadTree(quad: QuadTree) -> void:
 	draw_rect(resizeRect(quad.boundary), Color.RED, false, 2.)

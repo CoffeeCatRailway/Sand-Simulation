@@ -20,6 +20,13 @@ var mousePos := Vector2i.ZERO
 var isAdding := false
 var isRemoveing := false
 
+@export_range(1, 64) var threadCount: int = 2
+var threads: Array[Thread] = []
+var threadIndicies: Array[int] = []
+
+## Emitted on thread(s) once cells are processed
+signal threadProcessed(processedCells: Dictionary, index: int)
+
 func _ready() -> void:
 	# Calculate width/height
 	print("Sim Resolution: %s/%s" % [width, height])
@@ -31,14 +38,30 @@ func _ready() -> void:
 	#matrix = CellularMatrix.new(width, height)
 	quadTree = QuadTree.new(Rect2i(0, 0, width, height), 64)
 	
+	if threadCount == width || width / threadCount > 2:
+		printerr("Thread count is equal to width!")
+		get_tree().quit()
+	
+	for i in threadCount:
+		threads.append(Thread.new())
+		threadIndicies.append(i)
+	threadIndicies.shuffle()
+	
 	#for x in width:
 		#if x % 2 == 0:
 			#cells[Vector2i(x, 1)] = Cell.new()
 		#if x % 2 != 0:
 			#cells[Vector2i(x, 3)] = Cell.new()
 	
+	threadProcessed.connect(onThreadProcessed)
+	
 	# Initialze screen
 	passToShader()
+
+func _exit_tree() -> void:
+	for thread in threads:
+		if thread.is_alive():
+			thread.wait_to_finish()
 
 func _input(event) -> void:
 	## Brush
@@ -103,6 +126,76 @@ func handleMouse() -> void:
 func vec2iDist(a: Vector2i, b: Vector2i) -> float:
 	return sqrt(pow(a.x - b.x, 2.) + pow(a.y - b.y, 2.))
 
+func dictSubsetFromKeys(keys: Array, from: Dictionary) -> Dictionary:
+	var sub: Dictionary = {}
+	for key in keys:
+		if from.has(key):
+			sub[key] = from.get(key)
+	return sub
+
+func onThreadProcessed(processedCells: Dictionary, index: int) -> void:
+	var time := Time.get_ticks_msec()
+	for pos in processedCells.keys():
+		if !checkBounds(pos.x, pos.y):
+			continue
+		
+		var cell: Cell = processedCells.get(pos)
+		#if cell.visited:
+		if cell == null:
+			cells.erase(pos)
+			quadTree.remove(pos)
+		else:
+			cells[pos] = cell
+			quadTree.insert(pos)
+		#cells[pos].visited = false
+		markPassShader = true
+	threads[index].wait_to_finish()
+	print("Processing thread %s took %s miliseconds" % [index, Time.get_ticks_msec() - time])
+
+func startThread(index: int) -> void:
+	var thread := threads[index]
+	if thread.is_started():
+		#thread.wait_to_finish()
+		return
+	
+	var threadWidth: int = width / threadCount
+	var keys := quadTree.queryRange(Rect2(threadWidth * index, 0., threadWidth, height))
+	if !keys.is_empty():
+		var threadCells := dictSubsetFromKeys(keys, cells)
+		thread.start(processThread.bind(threadCells, index))
+		print("Starting thread", index)
+
+func processThread(threadCells: Dictionary, index: int) -> void:
+	for pos in threadCells.keys():
+		if !checkBounds(pos.x, pos.y):
+			continue
+		var cell: Cell = threadCells.get(pos)
+		if !cell.isMovible():
+			continue
+		
+		if cell.element == Cell.Elements.SAND || cell.element == Cell.Elements.RAINBOW_DUST:
+			var dx: int = pos.x + (1 if randf() > .5 else -1)
+			#var up: bool = checkBounds(pos.x, pos.y - 1) && !threadCells.has(Vector2i(pos.x, pos.y - 1))
+			var down: bool = checkBounds(pos.x, pos.y + 1) && !threadCells.has(Vector2i(pos.x, pos.y + 1))
+			var side: bool = checkBounds(dx, pos.y) && !threadCells.has(Vector2i(dx, pos.y))
+			var sided: bool = side && checkBounds(dx, pos.y + 1) && !threadCells.has(Vector2i(dx, pos.y + 1))
+			
+			if down:
+				#cell.visited = true
+				threadCells[Vector2i(pos.x, pos.y + 1)] = cell
+				#threadCells.erase(pos)
+				threadCells[pos] = null
+				#markPassShader = true
+			elif sided:
+				#cell.visited = true
+				threadCells[Vector2i(dx, pos.y + 1)] = cell
+				#threadCells.erase(pos)
+				threadCells[pos] = null
+				#markPassShader = true
+	#threadProcessed.emit(threadCells, index)
+	#emit_signal("threadProcessed", threadCells, index)
+	call_deferred("emit_signal", "threadProcessed", threadCells, index)
+
 func _physics_process(delta) -> void:
 	handleMouse()
 	
@@ -143,6 +236,12 @@ func _physics_process(delta) -> void:
 					#cells.erase(pos)
 					#markPassShader = true
 	
+	for i in threadIndicies:
+		if Engine.get_frames_drawn() % 2 == 0: # Even threads
+			startThread(i)
+		else:
+			startThread(i)
+	threadIndicies.shuffle()
 	
 	if markPassShader:
 		passToShader()
