@@ -9,7 +9,9 @@ extends Node2D
 @export var squareBrush: bool = false
 var selectedElement := Cell.Elements.SAND
 
-var matrix: CellularMatrix
+#var matrix: CellularMatrix
+var cells: Dictionary = {}
+var quadTree: QuadTree
 
 var image: Image
 var markPassShader := false
@@ -26,7 +28,14 @@ func _ready() -> void:
 	colorRect.material.set_shader_parameter("size", Vector2(width, height))
 	image = Image.create(width, height, false, Image.FORMAT_RGB8)
 	
-	matrix = CellularMatrix.new(width, height)
+	#matrix = CellularMatrix.new(width, height)
+	quadTree = QuadTree.new(Rect2i(0, 0, width, height), 64)
+	
+	#for x in width:
+		#if x % 2 == 0:
+			#cells[Vector2i(x, 1)] = Cell.new()
+		#if x % 2 != 0:
+			#cells[Vector2i(x, 3)] = Cell.new()
 	
 	# Initialze screen
 	passToShader()
@@ -66,6 +75,9 @@ func _input(event) -> void:
 		isAdding = event.is_action_pressed("mouse_left")
 		isRemoveing = event.is_action_pressed("mouse_right")
 
+func checkBounds(x: int, y: int) -> bool:
+	return x >= 0 && x < width && y >= 0 && y < height
+
 func handleMouse() -> void:
 	if isAdding || isRemoveing:
 		var pos := Vector2i.ZERO
@@ -73,17 +85,19 @@ func handleMouse() -> void:
 			for y in range(-brushRadius, brushRadius + 1):
 				pos.x = mousePos.x + x
 				pos.y = mousePos.y + y
-				if !matrix.checkBounds(pos.x, pos.y):
+				if !checkBounds(pos.x, pos.y):
 					continue
 				if vec2iDist(mousePos, pos) <= brushRadius || squareBrush:
 					if isRemoveing:
-						matrix.setCellv(pos, Cell.Elements.EMPTY)
-						#matrix.markCellVisitedv(pos)
-						markPassShader = true
+						if cells.has(pos):
+							cells.erase(pos)
+							quadTree.remove(pos)
+							markPassShader = true
 					if isAdding:
-						if matrix.getCellv(pos).element == Cell.Elements.EMPTY:
-							matrix.setCellv(pos, selectedElement)
-							#matrix.markCellVisitedv(pos)
+						if !cells.has(pos):
+							var cell := Cell.new(selectedElement)
+							cells[pos] = cell
+							quadTree.insert(pos)
 							markPassShader = true
 
 func vec2iDist(a: Vector2i, b: Vector2i) -> float:
@@ -91,22 +105,59 @@ func vec2iDist(a: Vector2i, b: Vector2i) -> float:
 
 func _physics_process(delta) -> void:
 	handleMouse()
-	if matrix.simulate():
-		markPassShader = true
+	
+	#for pos in cells.keys():
+		#if !checkBounds(pos.x, pos.y):
+			#continue
+		#var cell: Cell = cells.get(pos)
+		#if !cell.isMovible():
+			#continue
+		#
+		#if cell.element == Cell.Elements.SAND || cell.element == Cell.Elements.RAINBOW_DUST:
+			#var dx: int = pos.x + (1 if randf() > .5 else -1)
+			#var up: bool = checkBounds(pos.x, pos.y - 1) && !cells.has(Vector2i(pos.x, pos.y - 1))
+			#var down: bool = checkBounds(pos.x, pos.y + 1) && !cells.has(Vector2i(pos.x, pos.y + 1))
+			#var side: bool = checkBounds(dx, pos.y) && !cells.has(Vector2i(dx, pos.y))
+			#var sided: bool = side && checkBounds(dx, pos.y + 1) && !cells.has(Vector2i(dx, pos.y + 1))
+			#
+			#if down:
+				#cells[Vector2i(pos.x, pos.y + 1)] = cell
+				#cells.erase(pos)
+				#quadTree.insert(Vector2i(pos.x, pos.y + 1))
+				#quadTree.remove(pos)
+				#markPassShader = true
+			#elif sided:
+				#cells[Vector2i(dx, pos.y + 1)] = cell
+				#cells.erase(pos)
+				#quadTree.insert(Vector2i(dx, pos.y + 1))
+				#quadTree.remove(pos)
+				#markPassShader = true
+			#elif !up && side: # Push cell to side if another is on top
+				#cells[Vector2i(dx, pos.y)] = cell
+				#cells.erase(pos)
+				#markPassShader = true
+			#elif pos.y == height - 1: # 'Fall' through bottom & appear up top
+				#var top := Vector2i(pos.x, 0)
+				#if !cells.has(top):
+					#cells[top] = cell
+					#cells.erase(pos)
+					#markPassShader = true
+	
 	
 	if markPassShader:
 		passToShader()
-		matrix.post()
 		markPassShader = false
 
 func passToShader() -> void:
+	var time := Time.get_ticks_msec()
 	#var image := Image.create(width, height, false, Image.FORMAT_RGB8)
 	image.fill(Color.BLACK)
-	for x in width:
-		for y in height:
-			var cell: Cell = matrix.getCell(x, y)
-			if cell.element != Cell.Elements.EMPTY:
-				image.set_pixel(x, y, matrix.colorArray[y * width + x])
+	for pos in cells.keys():
+		if !checkBounds(pos.x, pos.y):
+			continue
+		var color = cells.get(pos).getColor()
+		image.set_pixelv(pos, color)
 	
 	var texture = ImageTexture.create_from_image(image)
 	colorRect.material.set_shader_parameter("tex", texture)
+	print("Passing to shader took %s miliseconds" % [Time.get_ticks_msec() - time])

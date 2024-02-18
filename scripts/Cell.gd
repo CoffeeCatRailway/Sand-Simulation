@@ -3,6 +3,11 @@ extends Resource
 
 var element: Elements = Elements.EMPTY
 var visited: bool = false
+var color: Color
+
+func _init(element: Elements = Elements.STONE):
+	self.element = element
+	color = getColor()
 
 enum Elements
 {
@@ -16,25 +21,31 @@ enum Elements
 }
 
 func getColor() -> Color:
-	var res: Color
-	match element:
-		Elements.SAND:
-			res = Color.SANDY_BROWN
-		Elements.STEAM:
-			res = Color.LIGHT_GRAY
-		Elements.WATER:
-			res = Color.CORNFLOWER_BLUE
-		Elements.STONE:
-			res = Color.DIM_GRAY
-		Elements.RAINBOW_DUST:
-			var hue = fmod(Time.get_unix_time_from_system(), 10.)
-			return Color.from_hsv(hue / 10., 1., .8)
-		Elements.LAVA:
-			return Color.from_hsv(randf_range(.04, .125), 1., .8)
-		_:
-			return Color.BLACK
-	res.v -= randf_range(0., .1)
-	return res
+	if !color:
+		var vary := false
+		match element:
+			Elements.SAND:
+				vary = true
+				color = Color.SANDY_BROWN
+			Elements.STEAM:
+				vary = true
+				color = Color.LIGHT_GRAY
+			Elements.WATER:
+				vary = true
+				color = Color.CORNFLOWER_BLUE
+			Elements.STONE:
+				vary = true
+				color = Color.DIM_GRAY
+			Elements.RAINBOW_DUST:
+				var hue := fmod(Time.get_unix_time_from_system(), 10.)
+				color = Color.from_hsv(hue / 10., 1., .8)
+			Elements.LAVA:
+				color = Color.from_hsv(randf_range(.04, .125), 1., .8)
+			_:
+				color = Color.BLACK
+		if vary:
+			color.v -= randf_range(0., .1)
+	return color
 
 func getDensity() -> int: #0-100  0 being nothing
 	match element:
