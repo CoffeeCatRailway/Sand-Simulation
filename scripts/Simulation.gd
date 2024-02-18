@@ -38,7 +38,7 @@ func _ready() -> void:
 	#matrix = CellularMatrix.new(width, height)
 	quadTree = QuadTree.new(Rect2i(0, 0, width, height), 64)
 	
-	if threadCount == width || width / threadCount > 2:
+	if threadCount == width || width / threadCount < 2:
 		printerr("Thread count is equal to width!")
 		get_tree().quit()
 	
