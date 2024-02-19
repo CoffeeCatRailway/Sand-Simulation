@@ -146,7 +146,7 @@ func onThreadProcessed(processedCells: Dictionary, index: int) -> void:
 		
 		var cell: Cell = processedCells.get(pos)
 		#if cell.visited:
-		if cell == null:
+		if !cell:
 			cells.erase(pos)
 			quadTree.remove(pos)
 			#image.set_pixelv(pos, Color.WHITE)
