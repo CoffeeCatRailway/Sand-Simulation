@@ -46,8 +46,7 @@ func _process(delta) -> void:
 	if size.x != sim.width || size.y != sim.height:
 		size = Vector2(sim.width, sim.height)
 	
-	if showQuadTree || showThreadBounds:
-		queue_redraw()
+	queue_redraw()
 
 func _draw() -> void:
 	if showQuadTree:

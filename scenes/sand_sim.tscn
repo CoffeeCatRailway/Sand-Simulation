@@ -12,7 +12,6 @@ shader_parameter/size = null
 script = ExtResource("1_vlsb0")
 width = 120
 height = 68
-threadCount = 8
 
 [node name="CanvasLayer" type="CanvasLayer" parent="."]
 follow_viewport_enabled = true
