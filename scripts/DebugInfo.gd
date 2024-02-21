@@ -23,6 +23,7 @@ func debugInfo(delta) -> void:
 	DebugDraw2D.set_text("---Stats---", null, -1)
 	
 	DebugDraw2D.set_text("Frames", Engine.get_frames_drawn())
+	DebugDraw2D.set_text("Physics Frames", Engine.get_physics_frames())
 	#DebugDraw2D.set_text("FPS", Engine.get_frames_per_second())
 	DebugDraw2D.graph_update_data("graph_fps", Engine.get_frames_per_second())
 	DebugDraw2D.set_text("Delta", delta)

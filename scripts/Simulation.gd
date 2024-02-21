@@ -169,12 +169,12 @@ func handleMouse() -> void:
 func vec2iDist(a: Vector2i, b: Vector2i) -> float:
 	return sqrt(pow(a.x - b.x, 2.) + pow(a.y - b.y, 2.))
 
-func dictSubsetFromKeys(keys: Array, from: Dictionary) -> Dictionary:
-	var sub: Dictionary = {}
-	for key in keys:
-		if from.has(key):
-			sub[key] = from.get(key)
-	return sub
+#func dictSubsetFromKeys(keys: Array, from: Dictionary) -> Dictionary:
+	#var sub: Dictionary = {}
+	#for key in keys:
+		#if from.has(key):
+			#sub[key] = from.get(key)
+	#return sub
 
 func getThreadBounds(index: int) -> Rect2:
 	var threadWidth: int = width / threadCount
@@ -221,13 +221,13 @@ func processThread(index: int) -> bool:
 	var quadTreeLocal := sharedQuadTree
 	mutex.unlock()
 	
-	if !quadTreeLocal.northWest && quadTreeLocal.points.is_empty():
+	if !quadTreeLocal || !quadTreeLocal.northWest && quadTreeLocal.points.is_empty():
 		return false
 	
 	var cellsProcessedLocal: Dictionary = {}
 	var threadCellKeys: Array[Vector2i] = quadTreeLocal.queryRange(getThreadBounds(index))
-	threadCellKeys.shuffle()
-	threadCellKeys.sort_custom(func(a, b): return a.y < b.y) # bottom to top
+	#threadCellKeys.shuffle()
+	threadCellKeys.sort_custom(func(a: Vector2i, b: Vector2i): return a.y < b.y) # bottom to top
 	
 	for pos in threadCellKeys:
 		if !checkBounds(pos.x, pos.y):
@@ -249,28 +249,20 @@ func processThread(index: int) -> bool:
 			
 			if down:
 				#cell.visited = true
-				#setCellv(Vector2i(pos.x, pos.y + 1), cell)
-				#eraseCellv(pos)
 				cellsProcessedLocal[Vector2i(pos.x, pos.y + 1)] = cell
 				cellsProcessedLocal[pos] = null
 				#markPassShader = true
 			elif sided:
 				#cell.visited = true
-				#setCellv(Vector2i(dx, pos.y + 1), cell)
-				#eraseCellv(pos)
 				cellsProcessedLocal[Vector2i(dx, pos.y + 1)] = cell
 				cellsProcessedLocal[pos] = null
 				#markPassShader = true
 			#elif !up && side: # Push cell to side if another is on top
-				##setCellv(Vector2i(dx, pos.y), cell)
-				##eraseCellv(pos)
 				#cellsProcessedLocal[Vector2i(dx, pos.y)] = cell
 				#cellsProcessedLocal[pos] = null
 			#elif pos.y == height - 1: # 'Fall' through bottom & appear up top
 				#var top := Vector2i(pos.x, 0)
 				#if !cellsLocal.has(top):
-					##setCellv(top, cell)
-					##eraseCellv(pos)
 					#cellsProcessedLocal[top] = cell
 					#cellsProcessedLocal[pos] = null
 	
@@ -329,7 +321,7 @@ func _physics_process(delta) -> void:
 	
 	if !cellsProcessedLocal.is_empty():
 		var updated: Array[Vector2i] = []
-		for pos in cellsProcessedLocal:
+		for pos in cellsProcessedLocal.keys():
 			var cell: Cell = cellsProcessedLocal.get(pos)
 			if cell:
 				setCellv(pos, cell)
