@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3 uid="uid://cmenht5xjd0ia"]
+
+[ext_resource type="Script" path="res://scripts/ThreadTest.gd" id="1_30uf6"]
+
+[node name="ThreadTest" type="Node2D"]
+script = ExtResource("1_30uf6")
