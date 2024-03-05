@@ -150,8 +150,6 @@ func getCellv(pos: Vector2i) -> Cell:
 func setCellv(pos: Vector2i, cell: Cell, passShader: bool = true) -> void:
 	cells[pos.y * width + pos.x] = cell
 	
-	#if cell.element == Cell.Elements.EMPTY:
-		#quadTree.insert(pos)
 	image.set_pixelv(pos, cell.getColor())
 	
 	#if cell.isMovible():
@@ -164,12 +162,7 @@ func setCellv(pos: Vector2i, cell: Cell, passShader: bool = true) -> void:
 		markPassShader = true
 
 func eraseCellv(pos: Vector2i, passShader: bool = true) -> bool:
-	#if !cells.has(pos):
-		#return false
-	
-	#cells.erase(pos)
 	cells[pos.y * width + pos.x] = Cell.new()
-	#quadTree.remove(pos)
 	image.set_pixelv(pos, Color.BLACK)
 	if passShader:
 		markPassShader = true
@@ -194,7 +187,6 @@ func handleMouse() -> void:
 					if isRemoveing:
 						eraseCellv(pos)
 					if isAdding:
-						#if !cells.has(pos):
 						if getCellv(pos).element == Cell.Elements.EMPTY:
 							var cell := Cell.new(selectedElement)
 							setCellv(pos, cell)
@@ -202,13 +194,6 @@ func handleMouse() -> void:
 
 func vec2iDist(a: Vector2i, b: Vector2i) -> float:
 	return sqrt(pow(a.x - b.x, 2.) + pow(a.y - b.y, 2.))
-
-#func dictSubsetFromKeys(keys: Array, from: Dictionary) -> Dictionary:
-	#var sub: Dictionary = {}
-	#for key in keys:
-		#if from.has(key):
-			#sub[key] = from.get(key)
-	#return sub
 
 func getThreadBounds(index: int) -> Rect2:
 	var threadWidth: int = width / threadCount
