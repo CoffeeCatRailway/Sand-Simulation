@@ -5,7 +5,7 @@ var element: Elements = Elements.EMPTY
 var visited: bool = false
 var color: Color
 
-func _init(element: Elements = Elements.STONE):
+func _init(element: Elements = Elements.EMPTY):
 	self.element = element
 	color = getColor()
 

@@ -10,10 +10,13 @@ extends Node2D
 var selectedElement := Cell.Elements.SAND
 
 #var matrix: CellularMatrix
-var cells: Dictionary = {}
-var cellsToProcess: Dictionary = {}
+#var cells: Dictionary = {}
+#var cellsToProcess: Dictionary = {}
 #var cellsProcessed: Dictionary = {}
-var quadTree: QuadTree
+#var quadTree: QuadTree
+#var sharedQuadTree: QuadTree
+var cells: Array[Cell] = []
+var idleRowSums: Array[int] = [] # Keeps track of how many tiles are in each row
 
 var image: Image
 var texture: ImageTexture
@@ -27,9 +30,10 @@ var isRemoveing := false
 var threads: Array[Thread] = []
 #var threadIndicies: Array[int] = []
 var mutex: Mutex
-var semaphoreEven: Semaphore
-var semaphoreOdd: Semaphore
+#var semaphoreEven: Semaphore
+#var semaphoreOdd: Semaphore
 var exitThread := false
+@export_range(30, 240, 15) var updatedFreq: int = 60
 
 func _ready() -> void:
 	# Checks for thread count
@@ -55,17 +59,28 @@ func _ready() -> void:
 	texture = ImageTexture.create_from_image(image)
 	
 	#matrix = CellularMatrix.new(width, height)
-	quadTree = QuadTree.new(Rect2i(0, 0, width, height), 64)
+	#quadTree = QuadTree.new(Rect2i(0, 0, width, height), 64)
+	#sharedQuadTree = quadTree
+	cells.resize(width * height)
+	cells.fill(Cell.new())
+	#for x in width:
+		#for y in height:
+			#var i := y * width + x
+			#cells[i] = Cell.new()
+			#setCellv(Vector2i(x, y), Cell.new())
+	
+	idleRowSums.resize(height)
+	idleRowSums.fill(0)
 	
 	mutex = Mutex.new()
-	semaphoreEven = Semaphore.new()
-	semaphoreOdd = Semaphore.new()
+	#semaphoreEven = Semaphore.new()
+	#semaphoreOdd = Semaphore.new()
 	
 	#for x in width:
 		#if x % 2 == 0:
-			#setCellv(Vector2i(x, 1), Cell.new())
+			#setCellv(Vector2i(x, 1), Cell.new(Cell.Elements.STONE))
 		#if x % 2 != 0:
-			#setCellv(Vector2i(x, 3), Cell.new())
+			#setCellv(Vector2i(x, 3), Cell.new(Cell.Elements.STONE))
 	
 	# Initialze screen
 	passToShader()
@@ -79,6 +94,13 @@ func _ready() -> void:
 			threads[i].start(processThreadOdd.bind(i))
 		print("Thread %s has id %s" % [i, threads[i].get_id()])
 
+## https://www.reddit.com/r/godot/comments/10lvy18/comment/j5zdo60/?utm_source=share&utm_medium=web2x&context=3
+func enableBit(mask: int, i: int) -> int:
+	return mask | (1 << i)
+
+func disableBit(mask: int, i: int) -> int:
+	return mask & ~(1 << i)
+
 func _exit_tree() -> void:
 	# Set thread exit condition
 	mutex.lock()
@@ -86,15 +108,14 @@ func _exit_tree() -> void:
 	mutex.unlock()
 	
 	# Unblock by posting
-	semaphoreEven.post()
-	semaphoreOdd.post()
+	#semaphoreEven.post()
+	#semaphoreOdd.post()
 	
 	# Wait for threads to finish
 	for i in threadCount:
 		if threads[i].is_alive():
 			print("Stopping thread ", threads[i].get_id())
 			threads[i].wait_to_finish()
-			threads[i] = null
 
 func _input(event) -> void:
 	## Brush
@@ -131,22 +152,42 @@ func _input(event) -> void:
 		isAdding = event.is_action_pressed("mouse_left")
 		isRemoveing = event.is_action_pressed("mouse_right")
 
+func getCellv(pos: Vector2i) -> Cell:
+	if !checkBounds(pos.x, pos.y):
+		return null
+	if !cells[pos.y * width + pos.x]:
+		print("WHY IS THIS NULL?! ", pos)
+		cells[pos.y * width + pos.x] = Cell.new()
+	return cells[pos.y * width + pos.x]
+
 func setCellv(pos: Vector2i, cell: Cell, passShader: bool = true) -> void:
-	cells[pos] = cell
-	quadTree.insert(pos)
+	cells[pos.y * width + pos.x] = cell
+	
+	#if cell.element == Cell.Elements.EMPTY:
+		#quadTree.insert(pos)
 	image.set_pixelv(pos, cell.getColor())
+	
+	if cell.isMovible():
+		if cell.element == Cell.Elements.EMPTY:
+			idleRowSums[pos.y] = disableBit(idleRowSums[pos.y], pos.x)
+		else:
+			idleRowSums[pos.y] = enableBit(idleRowSums[pos.y], pos.x)
+	
 	if passShader:
 		markPassShader = true
 
 func eraseCellv(pos: Vector2i, passShader: bool = true) -> bool:
-	if !cells.has(pos):
-		return false
+	#if !cells.has(pos):
+		#return false
 	
-	cells.erase(pos)
-	quadTree.remove(pos)
+	#cells.erase(pos)
+	cells[pos.y * width + pos.x] = Cell.new()
+	#quadTree.remove(pos)
 	image.set_pixelv(pos, Color.BLACK)
 	if passShader:
 		markPassShader = true
+	
+	idleRowSums[pos.y] = disableBit(idleRowSums[pos.y], pos.x)
 	return true
 
 func checkBounds(x: int, y: int) -> bool:
@@ -155,6 +196,7 @@ func checkBounds(x: int, y: int) -> bool:
 func handleMouse() -> void:
 	if isAdding || isRemoveing:
 		var pos := Vector2i.ZERO
+		mutex.lock()
 		for x in range(-brushRadius, brushRadius + 1):
 			for y in range(-brushRadius, brushRadius + 1):
 				pos.x = mousePos.x + x
@@ -165,9 +207,11 @@ func handleMouse() -> void:
 					if isRemoveing:
 						eraseCellv(pos)
 					if isAdding:
-						if !cells.has(pos):
+						#if !cells.has(pos):
+						if getCellv(pos).element == Cell.Elements.EMPTY:
 							var cell := Cell.new(selectedElement)
 							setCellv(pos, cell)
+		mutex.unlock()
 
 func vec2iDist(a: Vector2i, b: Vector2i) -> float:
 	return sqrt(pow(a.x - b.x, 2.) + pow(a.y - b.y, 2.))
@@ -185,8 +229,10 @@ func getThreadBounds(index: int) -> Rect2:
 
 func processThreadEven(index: int) -> void:
 	Thread.set_thread_safety_checks_enabled(false)
+	var time: int = 1000 / updatedFreq
 	while true:
-		semaphoreEven.wait()
+		#semaphoreEven.wait()
+		OS.delay_msec(time)
 		
 		mutex.lock()
 		var shouldExit = exitThread
@@ -196,13 +242,16 @@ func processThreadEven(index: int) -> void:
 			break
 		
 		## DO SHIT!
-		if processThread(index):
-			pass#semaphoreEven.post()
+		if Engine.get_physics_frames() % 2 == 0:
+			if processThread(index):
+				pass#semaphoreEven.post()
 
 func processThreadOdd(index: int) -> void:
 	Thread.set_thread_safety_checks_enabled(false)
+	var time: int = 1000 / updatedFreq
 	while true:
-		semaphoreOdd.wait()
+		#semaphoreOdd.wait()
+		OS.delay_msec(time)
 		
 		mutex.lock()
 		var shouldExit = exitThread
@@ -212,72 +261,95 @@ func processThreadOdd(index: int) -> void:
 			break
 		
 		## DO SHIT!
-		if processThread(index):
-			pass#semaphoreOdd.post()
+		if Engine.get_physics_frames() % 2 != 0:
+			if processThread(index):
+				pass#semaphoreOdd.post()
 
 func processThread(index: int) -> bool:
 	var time := Time.get_ticks_msec()
 	mutex.lock()
-	var cellsLocal := cellsToProcess
-	var quadTreeLocal := quadTree
+	var cellsLocal := cells.duplicate() #cellsToProcess
+	#var quadTreeLocal := quadTree #sharedQuadTree
+	var idleRowSumsLocal := idleRowSums
 	mutex.unlock()
 	
-	if !quadTreeLocal || !quadTreeLocal.northWest && quadTreeLocal.points.is_empty():
-		return false
+	#if !quadTreeLocal || !quadTreeLocal.northWest && quadTreeLocal.points.is_empty():
+		#return false
 	
-	var cellsProcessedLocal: Dictionary = {}
-	var threadCellKeys: Array[Vector2i] = quadTreeLocal.queryRange(getThreadBounds(index))
+	var cellsToPlace: Array[Cell] = []
+	var cellsToPlacePos: Array[Vector2i] = []
+	var cellsToErase: Array[Vector2i] = []
+	#var threadCellKeys: Array[Vector2i] = quadTreeLocal.queryRange(getThreadBounds(index))
 	#threadCellKeys.shuffle()
-	threadCellKeys.sort_custom(func(a: Vector2i, b: Vector2i): return a.y < b.y) # bottom to top
+	#threadCellKeys.sort_custom(func(a: Vector2i, b: Vector2i): return a.y < b.y) # bottom to top
 	
-	for pos in threadCellKeys:
-		if !checkBounds(pos.x, pos.y):
-			continue
-		var cell: Cell = cellsLocal.get(pos)
-		if !cell:
-			push_warning("Thread ", index, ": Cell at ", pos, " is null!")
-			continue
-		
-		if !cell.isMovible():
-			continue
-		
-		if cell.element == Cell.Elements.SAND || cell.element == Cell.Elements.RAINBOW_DUST:
-			var dx: int = pos.x + (1 if randf() > .5 else -1)
-			#var up: bool = checkBounds(pos.x, pos.y - 1) && !cellsLocal.has(Vector2i(pos.x, pos.y - 1))
-			var down: bool = checkBounds(pos.x, pos.y + 1) && !cellsLocal.has(Vector2i(pos.x, pos.y + 1))
-			var side: bool = checkBounds(dx, pos.y) && !cellsLocal.has(Vector2i(dx, pos.y))
-			var sided: bool = side && checkBounds(dx, pos.y + 1) && !cellsLocal.has(Vector2i(dx, pos.y + 1))
+	#for pos in threadCellKeys:
+	var threadWidth: int = width / threadCount
+	var threadX: int = threadWidth * index
+	for y in range(height, 0, -1):
+		y -= 1
+		#if idleRowSumsLocal[y] == 0: # Skip empty rows (x axis)
+			#continue
+		for x in range(threadX, threadX + threadWidth):
+			if !checkBounds(x, y):
+				continue
+			var cell: Cell = cellsLocal[y * width + x]
+			if !cell:
+				print("Thread ", index, ": Cell at (", x, y, ") is null!")
+				continue
 			
-			if down:
-				#cell.visited = true
-				cellsProcessedLocal[Vector2i(pos.x, pos.y + 1)] = cell
-				cellsProcessedLocal[pos] = null
-				#markPassShader = true
-			elif sided:
-				#cell.visited = true
-				cellsProcessedLocal[Vector2i(dx, pos.y + 1)] = cell
-				cellsProcessedLocal[pos] = null
-				#markPassShader = true
-			#elif !up && side: # Push cell to side if another is on top
-				#cellsProcessedLocal[Vector2i(dx, pos.y)] = cell
-				#cellsProcessedLocal[pos] = null
-			#elif pos.y == height - 1: # 'Fall' through bottom & appear up top
-				#var top := Vector2i(pos.x, 0)
-				#if !cellsLocal.has(top):
-					#cellsProcessedLocal[top] = cell
+			if !cell.isMovible():
+				continue
+			
+			if cell.element == Cell.Elements.SAND || cell.element == Cell.Elements.RAINBOW_DUST:
+				var dx: int = x + (1 if randf() > .5 else -1)
+				#var up: bool = checkBounds(pos.x, pos.y - 1) && !cellsLocal.has(Vector2i(pos.x, pos.y - 1))
+				var down: bool = checkBounds(x, y + 1) && cellsLocal[(y + 1) * width + x].element == Cell.Elements.EMPTY #!cellsLocal.has(Vector2i(pos.x, pos.y + 1))
+				var side: bool = checkBounds(dx, y) && cellsLocal[y * width + dx].element == Cell.Elements.EMPTY #!cellsLocal.has(Vector2i(dx, pos.y))
+				var sided: bool = side && checkBounds(dx, y + 1) && cellsLocal[(y + 1) * width + dx].element == Cell.Elements.EMPTY #!cellsLocal.has(Vector2i(dx, pos.y + 1))
+				
+				if down:
+					#cell.visited = true
+					cellsToPlace.push_back(cell)
+					cellsToPlacePos.push_back(Vector2i(x, y + 1))
+					cellsToErase.push_back(Vector2i(x, y))
+					#cellsProcessedLocal[Vector2i(x, y + 1)] = cell
+					#cellsProcessedLocal[Vector2i(x, y)] = null
+					#markPassShader = true
+				elif sided:
+					#cell.visited = true
+					cellsToPlace.push_back(cell)
+					cellsToPlacePos.push_back(Vector2i(dx, y + 1))
+					cellsToErase.push_back(Vector2i(x, y))
+					#cellsProcessedLocal[Vector2i(dx, y + 1)] = cell
+					#cellsProcessedLocal[Vector2i(x, y)] = null
+					#markPassShader = true
+				#elif !up && side: # Push cell to side if another is on top
+					#cellsProcessedLocal[Vector2i(dx, pos.y)] = cell
 					#cellsProcessedLocal[pos] = null
+				#elif pos.y == height - 1: # 'Fall' through bottom & appear up top
+					#var top := Vector2i(pos.x, 0)
+					#if !cellsLocal.has(top):
+						#cellsProcessedLocal[top] = cell
+						#cellsProcessedLocal[pos] = null
 	
 	mutex.lock()
 	## changed cells = what ever the fuck
+	for pos in cellsToErase:
+		eraseCellv(pos)
+	
+	for i in cellsToPlace.size():
+		setCellv(cellsToPlacePos[i], cellsToPlace[i])
+	
 	#cellsProcessed.merge(cellsProcessedLocal)
-	if !cellsProcessedLocal.is_empty():
-		#var updated: Array[Vector2i] = []
-		for pos in cellsProcessedLocal.keys():
-			var cell: Cell = cellsProcessedLocal.get(pos)
-			if cell:
-				setCellv(pos, cell)
-			else:
-				eraseCellv(pos)
+	#if !cellsProcessedLocal.is_empty():
+		##var updated: Array[Vector2i] = []
+		#for pos in cellsProcessedLocal.keys():
+			#var cell: Cell = cellsProcessedLocal.get(pos)
+			#if cell:
+				#setCellv(pos, cell)
+			#else:
+				#eraseCellv(pos)
 			#updated.append(pos)
 		
 		#mutex.lock()
@@ -285,10 +357,10 @@ func processThread(index: int) -> bool:
 			#cellsProcessed.erase(pos)
 		#mutex.unlock()
 	mutex.unlock()
-	print("Updating thread %s took %s miliseconds" % [OS.get_thread_caller_id(), Time.get_ticks_msec() - time])
-	return !cellsProcessedLocal.is_empty()
+	#print("Updating thread %s took %s miliseconds" % [OS.get_thread_caller_id(), Time.get_ticks_msec() - time])
+	return true
 
-func _physics_process(delta) -> void:
+func _physics_process(_delta) -> void:
 	handleMouse()
 	
 	#for pos in cells.keys():
@@ -323,16 +395,16 @@ func _physics_process(delta) -> void:
 					##eraseCellv(pos)
 	
 	## Some logic to notify threads
-	mutex.lock()
-	cellsToProcess = cells.duplicate()
+	#mutex.lock()
+	#cellsToProcess = cells.duplicate()
 	#sharedQuadTree = quadTree
 	#var cellsProcessedLocal := cellsProcessed.duplicate()
-	mutex.unlock()
+	#mutex.unlock()
 	
-	if Engine.get_physics_frames() % 2 == 0:
-		semaphoreEven.post()
-	else:
-		semaphoreOdd.post()
+	#if Engine.get_physics_frames() % 2 == 0:
+		#semaphoreEven.post()
+	#else:
+		#semaphoreOdd.post()
 	
 	#if !cellsProcessedLocal.is_empty():
 		#var updated: Array[Vector2i] = []
@@ -365,6 +437,6 @@ func passToShader() -> void:
 		#image.set_pixelv(pos, color)
 	
 	#var texture = ImageTexture.create_from_image(image)
-	texture.set_image(image)
+	texture.update(image)
 	colorRect.material.set_shader_parameter("tex", texture)
 	#print("Passing to shader took %s miliseconds" % [Time.get_ticks_msec() - time])
