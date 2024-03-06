@@ -27,7 +27,7 @@ func initializeArrays() -> void:
 	for x in width:
 		for y in height:
 			var i := y * width + x
-			var cell := Cell.new()
+			var cell := Cell.new(Cell.Elements.EMPTY)
 			cells[i] = cell
 			cellsOld[i] = cell
 			colorArray[i] = cell.getColor()

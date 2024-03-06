@@ -38,8 +38,8 @@ func _ready() -> void:
 		get_tree().quit()
 	
 	# Vsync & fps
-	DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_ENABLED)
-	Engine.max_fps = 60
+	#DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_DISABLED)
+	#Engine.max_fps = 60
 	#Engine.max_physics_steps_per_frame = 120
 	
 	# Calculate width/height
@@ -54,7 +54,7 @@ func _ready() -> void:
 	
 	#matrix = CellularMatrix.new(width, height)
 	cells.resize(width * height)
-	cells.fill(Cell.new())
+	cells.fill(Cell.new(Cell.Elements.EMPTY))
 	
 	#idleRowSums.resize(height)
 	#idleRowSums.fill(0)
@@ -63,11 +63,11 @@ func _ready() -> void:
 	#semaphoreEven = Semaphore.new()
 	#semaphoreOdd = Semaphore.new()
 	
-	#for x in width:
-		#if x % 2 == 0:
-			#setCellv(Vector2i(x, 1), Cell.new(Cell.Elements.STONE))
-		#if x % 2 != 0:
-			#setCellv(Vector2i(x, 3), Cell.new(Cell.Elements.STONE))
+	for x in width:
+		if x % 2 == 0:
+			setCellv(Vector2i(x, 1), Cell.new(Cell.Elements.STONE))
+		if x % 2 != 0:
+			setCellv(Vector2i(x, 3), Cell.new(Cell.Elements.STONE))
 	
 	# Initialze screen
 	passToShader()
@@ -142,9 +142,6 @@ func _input(event) -> void:
 func getCellv(pos: Vector2i) -> Cell:
 	if !checkBounds(pos.x, pos.y):
 		return null
-	if !cells[pos.y * width + pos.x]:
-		print("WHY IS THIS NULL?! ", pos)
-		cells[pos.y * width + pos.x] = Cell.new()
 	return cells[pos.y * width + pos.x]
 
 func setCellv(pos: Vector2i, cell: Cell, passShader: bool = true) -> void:
@@ -162,7 +159,7 @@ func setCellv(pos: Vector2i, cell: Cell, passShader: bool = true) -> void:
 		markPassShader = true
 
 func eraseCellv(pos: Vector2i, passShader: bool = true) -> bool:
-	cells[pos.y * width + pos.x] = Cell.new()
+	cells[pos.y * width + pos.x] = Cell.new(Cell.Elements.EMPTY)
 	image.set_pixelv(pos, Color.BLACK)
 	if passShader:
 		markPassShader = true
@@ -235,10 +232,14 @@ func processThreadOdd(index: int) -> void:
 		if Engine.get_physics_frames() % 2 != 0:
 			processThread(index)
 
+func cellModified(x: int, y: int, cellsToPlacePos: Array[Vector2i], cellsToErase: Array[Vector2i]) -> bool:
+	var temp := Vector2i(x, y)
+	return cellsToPlacePos.has(temp) || cellsToErase.has(temp)
+
 func processThread(index: int) -> void:
 	#var time := Time.get_ticks_msec()
 	mutex.lock()
-	var cellsLocal := cells.duplicate() #cellsToProcess
+	var cellsLocal := cells.duplicate()
 	#var idleRowSumsLocal := idleRowSums
 	mutex.unlock()
 	
@@ -248,27 +249,28 @@ func processThread(index: int) -> void:
 	
 	var threadWidth: int = width / threadCount
 	var threadX: int = threadWidth * index
-	for y in range(height, 0, -1):
-		y -= 1
+	#for y in range(height, 0, -1):
+	for y in height:
+		#y -= 1
 		#if idleRowSumsLocal[y] == 0: # Skip empty rows (x axis)
 			#continue
 		for x in range(threadX, threadX + threadWidth):
 			if !checkBounds(x, y):
 				continue
 			var cell: Cell = cellsLocal[y * width + x]
-			if !cell:
-				print("Thread ", index, ": Cell at (", x, y, ") is null!")
-				continue
+			#if !cell:
+				#print("Thread ", index, ": Cell at (", x, ",", y, ") is null!")
+				#continue
 			
 			if !cell.isMovible():
 				continue
 			
 			if cell.element == Cell.Elements.SAND || cell.element == Cell.Elements.RAINBOW_DUST:
 				var dx: int = x + (1 if randf() > .5 else -1)
-				#var up: bool = checkBounds(pos.x, pos.y - 1) && !cellsLocal.has(Vector2i(pos.x, pos.y - 1))
-				var down: bool = checkBounds(x, y + 1) && cellsLocal[(y + 1) * width + x].element == Cell.Elements.EMPTY #!cellsLocal.has(Vector2i(pos.x, pos.y + 1))
-				var side: bool = checkBounds(dx, y) && cellsLocal[y * width + dx].element == Cell.Elements.EMPTY #!cellsLocal.has(Vector2i(dx, pos.y))
-				var sided: bool = side && checkBounds(dx, y + 1) && cellsLocal[(y + 1) * width + dx].element == Cell.Elements.EMPTY #!cellsLocal.has(Vector2i(dx, pos.y + 1))
+				#var up: bool = checkBounds(x, y - 1) && cellsLocal[(y - 1) * width + x].element == Cell.Elements.EMPTY && !cellModified(x, y - 1, cellsToPlacePos, cellsToErase)
+				var down: bool = checkBounds(x, y + 1) && cellsLocal[(y + 1) * width + x].element == Cell.Elements.EMPTY && !cellModified(x, y + 1, cellsToPlacePos, cellsToErase)
+				var side: bool = checkBounds(dx, y) && cellsLocal[y * width + dx].element == Cell.Elements.EMPTY && !cellModified(dx, y, cellsToPlacePos, cellsToErase)
+				var sided: bool = side && checkBounds(dx, y + 1) && cellsLocal[(y + 1) * width + dx].element == Cell.Elements.EMPTY && !cellModified(dx, y + 1, cellsToPlacePos, cellsToErase)
 				
 				if down:
 					cellsToPlace.push_back(cell)
@@ -279,13 +281,14 @@ func processThread(index: int) -> void:
 					cellsToPlacePos.push_back(Vector2i(dx, y + 1))
 					cellsToErase.push_back(Vector2i(x, y))
 				#elif !up && side: # Push cell to side if another is on top
-					#cellsProcessedLocal[Vector2i(dx, pos.y)] = cell
-					#cellsProcessedLocal[pos] = null
-				#elif pos.y == height - 1: # 'Fall' through bottom & appear up top
-					#var top := Vector2i(pos.x, 0)
-					#if !cellsLocal.has(top):
-						#cellsProcessedLocal[top] = cell
-						#cellsProcessedLocal[pos] = null
+					#cellsToPlace.push_back(cell)
+					#cellsToPlacePos.push_back(Vector2i(dx, y))
+					#cellsToErase.push_back(Vector2i(x, y))
+				elif y == height - 1: # 'Fall' through bottom & appear up top
+					if cellsLocal[0 * width + x].element == Cell.Elements.EMPTY:
+						cellsToPlace.push_back(cell)
+						cellsToPlacePos.push_back(Vector2i(x, 0))
+						cellsToErase.push_back(Vector2i(x, y))
 	
 	mutex.lock()
 	## changed cells = what ever the fuck
