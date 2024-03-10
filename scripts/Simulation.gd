@@ -22,17 +22,23 @@ var isAdding := false
 var isRemoveing := false
 
 @export_range(1, 64) var threadCount: int = 4
+@export_range(30, 240, 15) var updatedFreq: int = 60
 var threads: Array[Thread] = []
 var mutex: Mutex
 #var semaphoreEven: Semaphore
 #var semaphoreOdd: Semaphore
 var exitThread := false
-@export_range(30, 240, 15) var updatedFreq: int = 60
 
 func _ready() -> void:
+	# Check if width / thread count is whole number
+	var fract := func(x: float): return x - floor(x)
+	var f: float = fract.call(float(width) / float(threadCount))
+	while f != 0.:
+		threadCount -= 1
+		print("Width / thread count is not whole! Lowered thread count to ", threadCount)
+		f = fract.call(float(width) / float(threadCount))
+	
 	# Checks for thread count
-	#if threadCount > 4 && threadCount % 4 != 0:
-		#threadCount -= threadCount % 4
 	if threadCount == width || width / threadCount < 2 || width < threadCount:
 		printerr("Thread count is equal to width!")
 		get_tree().quit()
@@ -40,7 +46,6 @@ func _ready() -> void:
 	# Vsync & fps
 	#DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_DISABLED)
 	#Engine.max_fps = 60
-	#Engine.max_physics_steps_per_frame = 120
 	
 	# Calculate width/height
 	print("Sim Resolution: %s/%s" % [width, height])
@@ -63,11 +68,11 @@ func _ready() -> void:
 	#semaphoreEven = Semaphore.new()
 	#semaphoreOdd = Semaphore.new()
 	
-	for x in width:
-		if x % 2 == 0:
-			setCellv(Vector2i(x, 1), Cell.new(Cell.Elements.STONE))
-		if x % 2 != 0:
-			setCellv(Vector2i(x, 3), Cell.new(Cell.Elements.STONE))
+	#for x in width:
+		#if x % 2 == 0:
+			#setCellv(Vector2i(x, 1), Cell.new(Cell.Elements.STONE))
+		#if x % 2 != 0:
+			#setCellv(Vector2i(x, 3), Cell.new(Cell.Elements.STONE))
 	
 	# Initialze screen
 	passToShader()
@@ -192,10 +197,6 @@ func handleMouse() -> void:
 func vec2iDist(a: Vector2i, b: Vector2i) -> float:
 	return sqrt(pow(a.x - b.x, 2.) + pow(a.y - b.y, 2.))
 
-func getThreadBounds(index: int) -> Rect2:
-	var threadWidth: int = width / threadCount
-	return Rect2(threadWidth * index, 0., threadWidth, height)
-
 func processThreadEven(index: int) -> void:
 	Thread.set_thread_safety_checks_enabled(false)
 	var time: int = 1000 / updatedFreq
@@ -247,11 +248,10 @@ func processThread(index: int) -> void:
 	var cellsToPlacePos: Array[Vector2i] = []
 	var cellsToErase: Array[Vector2i] = []
 	
-	var threadWidth: int = width / threadCount
+	var threadWidth: int = width / threadCount #roundi(float(width) / float(threadCount))
 	var threadX: int = threadWidth * index
-	#for y in range(height, 0, -1):
+	#for y in range(height - 1, -1, -1):
 	for y in height:
-		#y -= 1
 		#if idleRowSumsLocal[y] == 0: # Skip empty rows (x axis)
 			#continue
 		for x in range(threadX, threadX + threadWidth):
@@ -284,11 +284,11 @@ func processThread(index: int) -> void:
 					#cellsToPlace.push_back(cell)
 					#cellsToPlacePos.push_back(Vector2i(dx, y))
 					#cellsToErase.push_back(Vector2i(x, y))
-				elif y == height - 1: # 'Fall' through bottom & appear up top
-					if cellsLocal[0 * width + x].element == Cell.Elements.EMPTY:
-						cellsToPlace.push_back(cell)
-						cellsToPlacePos.push_back(Vector2i(x, 0))
-						cellsToErase.push_back(Vector2i(x, y))
+				#elif y == height - 1: # 'Fall' through bottom & appear up top
+					#if cellsLocal[0 * width + x].element == Cell.Elements.EMPTY:
+						#cellsToPlace.push_back(cell)
+						#cellsToPlacePos.push_back(Vector2i(x, 0))
+						#cellsToErase.push_back(Vector2i(x, y))
 	
 	mutex.lock()
 	## changed cells = what ever the fuck
@@ -303,36 +303,6 @@ func processThread(index: int) -> void:
 func _physics_process(_delta) -> void:
 	handleMouse()
 	
-	#for pos in cells.keys():
-		#if !checkBounds(pos.x, pos.y):
-			#continue
-		#var cell: Cell = cells.get(pos)
-		#if !cell.isMovible():
-			#continue
-		#
-		#if cell.element == Cell.Elements.SAND || cell.element == Cell.Elements.RAINBOW_DUST:
-			#var dx: int = pos.x + (1 if randf() > .5 else -1)
-			#var up: bool = checkBounds(pos.x, pos.y - 1) && !cells.has(Vector2i(pos.x, pos.y - 1))
-			#var down: bool = checkBounds(pos.x, pos.y + 1) && !cells.has(Vector2i(pos.x, pos.y + 1))
-			#var side: bool = checkBounds(dx, pos.y) && !cells.has(Vector2i(dx, pos.y))
-			#var sided: bool = side && checkBounds(dx, pos.y + 1) && !cells.has(Vector2i(dx, pos.y + 1))
-			#
-			#if down:
-				##cell.visited = true
-				#setCellv(Vector2i(pos.x, pos.y + 1), cell)
-				#eraseCellv(pos)
-			##elif sided:
-				###cell.visited = true
-				##setCellv(Vector2i(dx, pos.y + 1), cell)
-				##eraseCellv(pos)
-			#elif !up && side: # Push cell to side if another is on top
-				#setCellv(Vector2i(dx, pos.y), cell)
-				#eraseCellv(pos)
-			##elif pos.y == height - 1: # 'Fall' through bottom & appear up top
-				##var top := Vector2i(pos.x, 0)
-				##if !cells.has(top):
-					##setCellv(top, cell)
-					##eraseCellv(pos)
 	
 	## Some logic to notify threads
 	#if Engine.get_physics_frames() % 2 == 0:

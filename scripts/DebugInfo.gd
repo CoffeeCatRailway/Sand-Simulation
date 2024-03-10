@@ -58,7 +58,7 @@ func _draw() -> void:
 	if showThreadBounds:
 		# Draw thread bounds
 		for i in sim.threadCount:
-			var threadWidth: int = sim.width / sim.threadCount
+			var threadWidth: int = sim.width / sim.threadCount #roundi(float(sim.width) / float(sim.threadCount))
 			draw_rect(resizeRect(Rect2(threadWidth * i, 0., threadWidth, sim.height)), Color.GREEN, false, 1.)
 
 func drawQuadTree(quad: QuadTree) -> void:
